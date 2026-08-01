@@ -548,6 +548,9 @@ export async function registerAction(
     coupleIdToAssign = newCouple.id;
   }
 
+  // Encrypt password
+  const hashedPassword = encrypt(password);
+
   const { data: newUser, error: insertError } = await supabase
     .from("users")
     .insert({

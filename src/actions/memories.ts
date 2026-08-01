@@ -17,7 +17,7 @@ export async function createMemoryAction(
   formData: FormData
 ) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
@@ -39,6 +39,7 @@ export async function createMemoryAction(
     description: parsed.data.description || null,
     image_url: parsed.data.image_url || null,
     is_default: false,
+    couple_id: session.coupleId,
   });
 
   if (error) {
@@ -52,7 +53,7 @@ export async function createMemoryAction(
 
 export async function deleteMemoryAction(id: number) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
@@ -61,6 +62,7 @@ export async function deleteMemoryAction(id: number) {
     .from("memories")
     .delete()
     .eq("id", id)
+    .eq("couple_id", session.coupleId)
     .eq("is_default", false); // Cannot delete default memories
 
   if (error) {

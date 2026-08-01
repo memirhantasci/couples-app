@@ -30,7 +30,7 @@ export default async function PhotoDayPage({ params }: Props) {
   const supabase = createServerClient();
 
   const { data: photos, error } = await supabase
-    .from("photo_archive")
+    .from("photo_archive").eq("couple_id", session.coupleId)
     .select(`
       id, user_id, image_url, storage_path, title, description,
       taken_date, taken_time, uploaded_at, exif_found, file_size,

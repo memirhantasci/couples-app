@@ -24,6 +24,7 @@ export async function GET(
     .from("photo_archive")
     .select("storage_path, image_url")
     .eq("id", id)
+    .eq("couple_id", session.coupleId)
     .single();
 
   if (dbError || !photo || !photo.storage_path) {

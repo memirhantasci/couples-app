@@ -21,11 +21,11 @@ export default async function AdminMedicinesPage() {
 
   const [medicinesResult, logsResult, usersResult] = await Promise.all([
     supabase
-      .from("medicines")
+      .from("medicines").eq("couple_id", session.coupleId)
       .select("*, user:users(username, display_name)")
       .order("created_at", { ascending: false }),
     supabase
-      .from("medicine_logs")
+      .from("medicine_logs").eq("couple_id", session.coupleId)
       .select("*, user:users(username, display_name)")
       .order("date", { ascending: false }), // Fixed order to use date since taken_at doesn't exist
     supabase

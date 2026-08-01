@@ -67,6 +67,7 @@ export async function uploadPhotoAction(
   // Save to database, leaving image_url temporary empty or placeholder
   const { data: dbData, error: dbError } = await supabase.from("photo_archive").insert({
     user_id: session.userId,
+    couple_id: session.coupleId,
     image_url: "", // Will update in a second
     storage_path: storagePath,
     title: title ? encrypt(title) : null,
@@ -112,14 +113,14 @@ export async function updatePhotoAction(
 
   const supabase = createServerClient();
 
-  // Verify ownership
+  // Verify ownership via couple_id
   const { data: photo } = await supabase
     .from("photo_archive")
-    .select("user_id")
+    .select("couple_id")
     .eq("id", photoId)
     .single();
 
-  if (!photo || photo.user_id !== session.userId) {
+  if (!photo || photo.couple_id !== session.coupleId) {
     return { error: "Bu fotoğrafı düzenleme yetkiniz yok." };
   }
 
@@ -132,7 +133,7 @@ export async function updatePhotoAction(
       taken_time: takenTime || null,
     })
     .eq("id", photoId)
-    .eq("user_id", session.userId);
+    .eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "Güncellenirken hata oluştu: " + error.message };

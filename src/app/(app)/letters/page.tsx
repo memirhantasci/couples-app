@@ -19,7 +19,7 @@ export default async function LettersPage() {
   const supabase = createServerClient();
 
   const { data: receivedLetters } = await supabase
-    .from("letters")
+    .from("letters").eq("couple_id", session.coupleId)
     .select(`
       *,
       sender:users!letters_sender_id_fkey(username, display_name)
@@ -28,7 +28,7 @@ export default async function LettersPage() {
     .order("created_at", { ascending: false });
 
   const { data: sentLetters } = await supabase
-    .from("letters")
+    .from("letters").eq("couple_id", session.coupleId)
     .select(`
       *,
       receiver:users!letters_receiver_id_fkey(username, display_name)

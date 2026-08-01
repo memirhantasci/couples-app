@@ -19,7 +19,7 @@ export default async function DailyNotesUserPage() {
   const supabase = createServerClient();
 
   const { data: notesResult } = await supabase
-    .from("daily_notes")
+    .from("daily_notes").eq("couple_id", session.coupleId)
     .select("id, date, content")
     .eq("user_id", session.userId)
     .order("date", { ascending: false });

@@ -26,7 +26,7 @@ async function calculateStreak(
   for (let i = 0; i < 180; i++) {
     const dateStr = checkDate.tz("Europe/Istanbul").format("YYYY-MM-DD");
     const { data: logs } = await supabase
-      .from("medicine_logs")
+      .from("medicine_logs").eq("couple_id", session.coupleId)
       .select("medicine_id, status, time")
       .eq("user_id", userId)
       .eq("date", dateStr)
@@ -62,7 +62,7 @@ export default async function MedicinePage() {
 
   const [medicinesResult, todayLogsResult, historicalLogsResult] = await Promise.all([
     supabase
-      .from("medicines")
+      .from("medicines").eq("couple_id", session.coupleId)
       .select("id, name, time, times, start_date, end_date, is_active, user_id")
       .eq("is_active", true)
       .eq("user_id", session.userId)
@@ -70,12 +70,12 @@ export default async function MedicinePage() {
       .gte("end_date", today)
       .order("time"),
     supabase
-      .from("medicine_logs")
+      .from("medicine_logs").eq("couple_id", session.coupleId)
       .select("medicine_id, status, date, time")
       .eq("user_id", session.userId)
       .eq("date", today),
     supabase
-      .from("medicine_logs")
+      .from("medicine_logs").eq("couple_id", session.coupleId)
       .select("medicine_id, status, date, time")
       .eq("user_id", session.userId)
       .gte("date", fourteenDaysAgo)

@@ -31,6 +31,7 @@ export async function upsertDailyNoteAction(
       user_id: session.userId,
       date: today,
       content: encrypt(parsed.data.content),
+      couple_id: session.coupleId,
     },
     {
       onConflict: "user_id,date",
@@ -51,7 +52,7 @@ export async function deleteDailyNoteAction(id: number) {
   if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
 
   const supabase = createServerClient();
-  const { error } = await supabase.from("daily_notes").delete().eq("id", id);
+  const { error } = await supabase.from("daily_notes").delete().eq("id", id).eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "Not silinirken hata oluştu." };
@@ -74,7 +75,8 @@ export async function editDailyNoteAdminAction(id: number, content: string) {
   const { error } = await supabase
     .from("daily_notes")
     .update({ content: encrypt(parsed.data) })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "Not güncellenirken hata oluştu." };
@@ -105,6 +107,7 @@ export async function upsertMoodAction(moodType: string) {
       user_id: session.userId,
       date: today,
       mood_type: parsed.data.mood_type,
+      couple_id: session.coupleId,
     },
     {
       onConflict: "user_id,date",

@@ -20,7 +20,7 @@ export default async function AdminLettersPage() {
   const supabase = createServerClient();
 
   const { data: letters } = await supabase
-    .from("letters")
+    .from("letters").eq("couple_id", session.coupleId)
     .select(`
       *,
       sender:users!letters_sender_id_fkey(username, display_name),

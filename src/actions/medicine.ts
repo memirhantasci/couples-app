@@ -21,7 +21,7 @@ export async function createMedicineAction(
   formData: FormData
 ) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
+  if (!session || !session.coupleId) return { error: "Yetkisiz erişim." };
 
   const rawTimes = formData.getAll("times").map((t) => (t as string).substring(0, 5)).filter(Boolean);
   // Support single 'time' fallback if passed instead of 'times'
@@ -54,6 +54,7 @@ export async function createMedicineAction(
     times: sortedTimes,
     user_id: parsed.data.user_id,
     is_active: true,
+    couple_id: session.coupleId,
   });
 
   if (error) {
@@ -73,7 +74,7 @@ export async function updateMedicineLogAction(
   timeSlot?: string
 ) {
   const session = await getSession();
-  if (!session) return { error: "Oturum bulunamadı." };
+  if (!session || !session.coupleId) return { error: "Oturum bulunamadı." };
 
   const supabase = createServerClient();
   const today = todayString();
@@ -103,6 +104,7 @@ export async function updateMedicineLogAction(
       time: slotTime,
       status,
       taken_at: status === "DRANK" ? new Date().toISOString() : null,
+      couple_id: session.coupleId,
     },
     {
       onConflict: "medicine_id,date,user_id,time",
@@ -120,7 +122,7 @@ export async function updateMedicineLogAction(
 // ─── Toggle Medicine Active Status (Admin only) ───────────────────────────────
 export async function toggleMedicineActiveAction(id: number, isActive: boolean) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
@@ -128,7 +130,8 @@ export async function toggleMedicineActiveAction(id: number, isActive: boolean) 
   const { error } = await supabase
     .from("medicines")
     .update({ is_active: isActive })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) return { error: "Güncellenirken hata oluştu." };
 
@@ -140,12 +143,12 @@ export async function toggleMedicineActiveAction(id: number, isActive: boolean) 
 // ─── Delete Medicine (Admin only) ─────────────────────────────────────────────
 export async function deleteMedicineAction(id: number) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
   const supabase = createServerClient();
-  const { error } = await supabase.from("medicines").delete().eq("id", id);
+  const { error } = await supabase.from("medicines").delete().eq("id", id).eq("couple_id", session.coupleId);
 
   if (error) return { error: "Silinirken hata oluştu." };
 
@@ -160,7 +163,7 @@ export async function editMedicineAction(
   data: { name: string; start_date: string; end_date: string; times: string[]; user_id: number }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
+  if (!session || !session.coupleId) return { error: "Yetkisiz erişim." };
 
   const parsed = medicineSchema.safeParse(data);
   if (!parsed.success) {
@@ -181,7 +184,8 @@ export async function editMedicineAction(
       times: sortedTimes,
       user_id: parsed.data.user_id,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "İlaç güncellenirken hata oluştu." };

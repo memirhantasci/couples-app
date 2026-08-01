@@ -19,7 +19,7 @@ export default async function AdminMeetingsPage() {
   const supabase = createServerClient();
 
   const { data: activeMeetings } = await supabase
-    .from("meetings")
+    .from("meetings").eq("couple_id", session.coupleId)
     .select("id, meeting_datetime, title, is_active")
     .eq("is_active", true)
     .order("meeting_datetime", { ascending: true });

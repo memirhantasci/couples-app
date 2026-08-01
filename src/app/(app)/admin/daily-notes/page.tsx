@@ -21,7 +21,7 @@ export default async function AdminDailyNotesPage() {
   const supabase = createServerClient();
 
   const { data: notes } = await supabase
-    .from("daily_notes")
+    .from("daily_notes").eq("couple_id", session.coupleId)
     .select(`
       *,
       user:users(username, display_name)

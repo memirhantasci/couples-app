@@ -10,7 +10,7 @@ export async function createLetterAction(
   formData: FormData
 ) {
   const session = await getSession();
-  if (!session) return { error: "Oturum süresi doldu." };
+  if (!session || !session.coupleId) return { error: "Oturum süresi doldu veya yetkisiz." };
 
   const receiver_id = formData.get("receiver_id")?.toString();
   const title = formData.get("title")?.toString().trim();
@@ -29,6 +29,7 @@ export async function createLetterAction(
     title,
     content: encrypt(content),
     unlock_date,
+    couple_id: session.coupleId,
   });
 
   if (error) {
@@ -42,10 +43,10 @@ export async function createLetterAction(
 
 export async function deleteLetterAction(id: number) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
+  if (!session || !session.coupleId) return { error: "Yetkisiz erişim." };
 
   const supabase = createServerClient();
-  const { error } = await supabase.from("letters").delete().eq("id", id);
+  const { error } = await supabase.from("letters").delete().eq("id", id).eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "Mektup silinirken hata oluştu." };
@@ -58,7 +59,7 @@ export async function deleteLetterAction(id: number) {
 
 export async function editLetterAdminAction(id: number, content: string) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
+  if (!session || !session.coupleId) return { error: "Yetkisiz erişim." };
 
   if (!content.trim()) {
     return { error: "Mektup içeriği boş olamaz." };
@@ -68,7 +69,8 @@ export async function editLetterAdminAction(id: number, content: string) {
   const { error } = await supabase
     .from("letters")
     .update({ content: encrypt(content.trim()) })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "Mektup güncellenirken hata oluştu." };

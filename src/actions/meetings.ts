@@ -16,7 +16,7 @@ export async function createMeetingAction(
   formData: FormData
 ) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
@@ -38,6 +38,7 @@ export async function createMeetingAction(
     meeting_datetime: utcDateTime,
     title: parsed.data.title || "Buluşma",
     is_active: true,
+    couple_id: session.coupleId,
   });
 
   if (error) {
@@ -51,7 +52,7 @@ export async function createMeetingAction(
 
 export async function deactivateMeetingAction(id: number) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
@@ -59,7 +60,8 @@ export async function deactivateMeetingAction(id: number) {
   const { error } = await supabase
     .from("meetings")
     .update({ is_active: false })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) return { error: "Güncelleme başarısız." };
 
@@ -70,7 +72,7 @@ export async function deactivateMeetingAction(id: number) {
 
 export async function updateMeetingAction(id: number, meeting_datetime: string) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !session.coupleId) {
     return { error: "Bu işlem için yetkiniz yok." };
   }
 
@@ -80,7 +82,8 @@ export async function updateMeetingAction(id: number, meeting_datetime: string) 
   const { error } = await supabase
     .from("meetings")
     .update({ meeting_datetime: utcDateTime })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) return { error: "Güncelleme başarısız." };
 
@@ -132,6 +135,7 @@ export async function upsertCalendarNoteAction(
       date: parsed.data.date,
       note: parsed.data.note,
       user_id: session.userId,
+      couple_id: session.coupleId,
     });
     if (error) return { error: "Not eklenirken hata oluştu: " + error.message };
   }
@@ -155,7 +159,7 @@ export async function deleteCalendarNoteAction(id: number) {
   if (!existing) return { error: "Not bulunamadı." };
   if (existing.user_id !== session.userId) return { error: "Bu notu sadece yazan silebilir." };
 
-  const { error } = await supabase.from("calendar_notes").delete().eq("id", id);
+  const { error } = await supabase.from("calendar_notes").delete().eq("id", id).eq("couple_id", session.coupleId);
 
   if (error) return { error: "Silme başarısız." };
 
@@ -165,10 +169,10 @@ export async function deleteCalendarNoteAction(id: number) {
 
 export async function deleteCalendarNoteAdminAction(id: number) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
+  if (!session || !session.coupleId) return { error: "Yetkisiz erişim." };
 
   const supabase = createServerClient();
-  const { error } = await supabase.from("calendar_notes").delete().eq("id", id);
+  const { error } = await supabase.from("calendar_notes").delete().eq("id", id).eq("couple_id", session.coupleId);
 
   if (error) return { error: "Silme başarısız." };
 
@@ -178,7 +182,7 @@ export async function deleteCalendarNoteAdminAction(id: number) {
 
 export async function editCalendarNoteAdminAction(id: number, note: string) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") return { error: "Yetkisiz erişim." };
+  if (!session || !session.coupleId) return { error: "Yetkisiz erişim." };
 
   if (!note.trim()) {
     return { error: "Not içeriği boş olamaz." };
@@ -188,7 +192,8 @@ export async function editCalendarNoteAdminAction(id: number, note: string) {
   const { error } = await supabase
     .from("calendar_notes")
     .update({ note: note.trim() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("couple_id", session.coupleId);
 
   if (error) {
     return { error: "Not güncellenirken hata oluştu." };

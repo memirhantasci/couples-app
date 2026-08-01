@@ -23,7 +23,7 @@ export default async function AdminMoodsPage() {
 
   const [moodsResult, usersResult] = await Promise.all([
     supabase
-      .from("moods")
+      .from("moods").eq("couple_id", session.coupleId)
       .select("date, mood_type, user_id")
       .gte("date", thirtyDaysAgo)
       .lte("date", today)

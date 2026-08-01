@@ -18,7 +18,7 @@ export default async function PeriodTrackerPage() {
   const supabase = createServerClient();
 
   const { data: logs, error } = await supabase
-    .from("period_logs")
+    .from("period_logs").eq("couple_id", session.coupleId)
     .select("id, date")
     .order("date", { ascending: false });
 
