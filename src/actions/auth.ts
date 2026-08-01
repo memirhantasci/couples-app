@@ -855,6 +855,6 @@ export async function verifyResetAction(prevState: any, formData: FormData) {
     .eq("id", otpRecords[0].id);
 
   cookieStore.delete("pending_reset_user_id");
-  
   redirect("/login?reset=success");
 }
+
