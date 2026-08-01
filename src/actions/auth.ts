@@ -548,7 +548,7 @@ export async function registerAction(
     coupleIdToAssign = newCouple.id;
   }
 
-  const { error: insertError } = await supabase
+  const { data: newUser, error: insertError } = await supabase
     .from("users")
     .insert({
       display_name: displayName,
@@ -557,18 +557,166 @@ export async function registerAction(
       password: hashedPassword,
       role: "USER",
       couple_id: coupleIdToAssign
-    });
+    })
+    .select("id")
+    .single();
 
-  if (insertError) {
+  if (insertError || !newUser) {
     console.error("Register Error:", insertError);
-    return { error: "Kayıt olurken bir hata oluştu: " + insertError.message };
+    return { error: "Kayıt olurken bir hata oluştu: " + (insertError?.message || "") };
   }
 
+  // --- SEND OTP FOR REGISTRATION VERIFICATION ---
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+  await supabase.from("otp_codes").insert({
+    user_id: newUser.id,
+    code: otpCode,
+    expires_at: expiresAt.toISOString(),
+  });
+
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent") || "";
+  const ipAddress =
+    headersList.get("x-forwarded-for")?.split(",")[0] ||
+    headersList.get("x-real-ip") ||
+    "unknown";
+
+  // Create unverified device
+  await supabase.from("device_authorizations").insert({
+    user_id: newUser.id,
+    ip_address: ipAddress,
+    user_agent: userAgent,
+    is_verified: false
+  });
+
+  // Send Email
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER || "dummy",
+        pass: process.env.SMTP_PASS || "dummy",
+      },
+    });
+    
+    if (process.env.SMTP_USER) {
+        await transporter.sendMail({
+          from: process.env.SMTP_USER,
+          to: email,
+          subject: "Kayıt Doğrulama Kodu",
+          text: `Aramıza hoş geldiniz! Hesabınızı onaylamak için doğrulama kodunuz: ${otpCode}`,
+        });
+    } else {
+        console.log("NO SMTP CONFIGURED. REGISTRATION OTP CODE IS:", otpCode);
+    }
+  } catch (e) {
+    console.error("Email send error:", e);
+    console.log("FALLBACK REGISTRATION OTP CODE IS:", otpCode);
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set("pending_register_user", newUser.id, { httpOnly: true, maxAge: 600 });
+  cookieStore.set("pending_register_ip", ipAddress, { httpOnly: true, maxAge: 600 });
+  cookieStore.set("pending_register_ua", userAgent, { httpOnly: true, maxAge: 600 });
   if (generatedCode) {
-    return { success: true, pairingCodeToDisplay: generatedCode };
+    cookieStore.set("pending_register_pairing_code", generatedCode, { httpOnly: true, maxAge: 600 });
   }
 
-  redirect("/login?paired=true");
+  redirect("/register/verify");
+}
+
+export async function verifyRegisterAction(prevState: any, formData: FormData) {
+  const code = formData.get("code") as string;
+  const cookieStore = await cookies();
+  const pendingUserId = cookieStore.get("pending_register_user")?.value;
+  const pendingIp = cookieStore.get("pending_register_ip")?.value;
+  const pendingUa = cookieStore.get("pending_register_ua")?.value;
+  const pendingPairingCode = cookieStore.get("pending_register_pairing_code")?.value;
+
+  if (!pendingUserId || !pendingIp) {
+    return { error: "Oturum süresi dolmuş. Lütfen tekrar kayıt olun." };
+  }
+  if (!code || code.length !== 6) {
+    return { error: "Geçersiz kod." };
+  }
+
+  const supabase = createServerClient();
+  
+  // Check OTP
+  const { data: otpRecords } = await supabase
+    .from("otp_codes")
+    .select("*")
+    .eq("user_id", pendingUserId)
+    .eq("is_used", false)
+    .gte("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+
+  if (!otpRecords || otpRecords.length === 0) {
+    return { error: "Geçersiz veya süresi dolmuş kod." };
+  }
+
+  const isValidCode = otpRecords.some(r => r.code === code);
+  
+  if (!isValidCode) {
+    return { error: "Kod hatalı." };
+  }
+
+  // Verify device
+  let query = supabase
+    .from("device_authorizations")
+    .update({ is_verified: true })
+    .eq("user_id", pendingUserId)
+    .eq("ip_address", pendingIp);
+
+  if (pendingUa) {
+    query = query.eq("user_agent", pendingUa);
+  }
+  await query;
+
+  // Mark OTP used
+  await supabase
+    .from("otp_codes")
+    .update({ is_used: true })
+    .eq("id", otpRecords[0].id);
+
+  // Get user to login
+  const { data: user } = await supabase.from("users").select("*").eq("id", pendingUserId).single();
+  if (!user) return { error: "Kullanıcı bulunamadı." };
+
+  // Create session
+  const { data: loginLog } = await supabase
+    .from("login_logs")
+    .insert({ user_id: user.id, ip_address: pendingIp })
+    .select("id")
+    .single();
+
+  const nowTR = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const today = nowTR.toISOString().slice(0, 10);
+
+  await createSession({
+    userId: user.id,
+    coupleId: user.couple_id,
+    username: deterministicDecrypt(user.username) || user.username,
+    displayName: user.display_name || deterministicDecrypt(user.username) || user.username,
+    role: user.role as "ADMIN" | "USER",
+    loginDate: today,
+    loginLogId: loginLog?.id ?? 0,
+  });
+
+  cookieStore.delete("pending_register_user");
+  cookieStore.delete("pending_register_ip");
+  cookieStore.delete("pending_register_ua");
+  cookieStore.delete("pending_register_pairing_code");
+  
+  if (pendingPairingCode) {
+    return { success: true, pairingCodeToDisplay: pendingPairingCode };
+  }
+
+  redirect("/home");
 }
 export async function changePasswordAction(prevState: LoginState, formData: FormData): Promise<LoginState> {
   const username = formData.get("username") as string;
