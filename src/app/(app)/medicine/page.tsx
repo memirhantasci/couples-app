@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 async function calculateStreak(
   supabase: ReturnType<typeof createServerClient>,
   userId: number,
+  coupleId: number,
   activeMeds: { id: number; time: string; times?: string[] }[]
 ): Promise<number> {
   if (activeMeds.length === 0) return 0;
@@ -26,8 +27,9 @@ async function calculateStreak(
   for (let i = 0; i < 180; i++) {
     const dateStr = checkDate.tz("Europe/Istanbul").format("YYYY-MM-DD");
     const { data: logs } = await supabase
-      .from("medicine_logs").eq("couple_id", session.coupleId)
+      .from("medicine_logs")
       .select("medicine_id, status, time")
+      .eq("couple_id", coupleId)
       .eq("user_id", userId)
       .eq("date", dateStr)
       .in("medicine_id", medIds);
@@ -62,21 +64,24 @@ export default async function MedicinePage() {
 
   const [medicinesResult, todayLogsResult, historicalLogsResult] = await Promise.all([
     supabase
-      .from("medicines").eq("couple_id", session.coupleId)
+      .from("medicines")
       .select("id, name, time, times, start_date, end_date, is_active, user_id")
+      .eq("couple_id", session.coupleId as number)
       .eq("is_active", true)
       .eq("user_id", session.userId)
       .lte("start_date", today)
       .gte("end_date", today)
       .order("time"),
     supabase
-      .from("medicine_logs").eq("couple_id", session.coupleId)
+      .from("medicine_logs")
       .select("medicine_id, status, date, time")
+      .eq("couple_id", session.coupleId as number)
       .eq("user_id", session.userId)
       .eq("date", today),
     supabase
-      .from("medicine_logs").eq("couple_id", session.coupleId)
+      .from("medicine_logs")
       .select("medicine_id, status, date, time")
+      .eq("couple_id", session.coupleId as number)
       .eq("user_id", session.userId)
       .gte("date", fourteenDaysAgo)
       .lt("date", today)
@@ -87,7 +92,7 @@ export default async function MedicinePage() {
   const todayLogs = todayLogsResult.data ?? [];
   const historicalLogs = historicalLogsResult.data ?? [];
 
-  const streakValue = await calculateStreak(supabase, session.userId, medicines);
+  const streakValue = await calculateStreak(supabase, session.userId, session.coupleId as number, medicines);
 
   const dateLabel = dayjs().locale("tr").tz("Europe/Istanbul").format("D MMMM YYYY, dddd");
 

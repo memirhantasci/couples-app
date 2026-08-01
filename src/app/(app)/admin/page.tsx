@@ -21,12 +21,14 @@ export default async function AdminDashboardPage() {
 
   const [activeMeetingResult, activeMedsResult, todayLoginsResult] = await Promise.all([
     supabase
-      .from("meetings").eq("couple_id", session.coupleId)
+      .from("meetings")
       .select("title")
+      .eq("couple_id", session.coupleId)
       .eq("is_active", true),
     supabase
-      .from("medicines").eq("couple_id", session.coupleId)
+      .from("medicines")
       .select("id")
+      .eq("couple_id", session.coupleId)
       .eq("is_active", true)
       .lte("start_date", today)
       .gte("end_date", today),

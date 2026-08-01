@@ -19,8 +19,9 @@ export default async function MemoriesPage() {
   const supabase = createServerClient();
 
   const { data: memories } = await supabase
-    .from("memories").eq("couple_id", session.coupleId)
+    .from("memories")
     .select("id, date, title, description, image_url, is_default")
+      .eq("couple_id", session.coupleId)
     .order("date", { ascending: true });
 
   return (

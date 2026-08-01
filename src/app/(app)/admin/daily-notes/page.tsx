@@ -21,11 +21,12 @@ export default async function AdminDailyNotesPage() {
   const supabase = createServerClient();
 
   const { data: notes } = await supabase
-    .from("daily_notes").eq("couple_id", session.coupleId)
+    .from("daily_notes")
     .select(`
       *,
       user:users(username, display_name)
     `)
+      .eq("couple_id", session.coupleId)
     .order("date", { ascending: false });
 
   return (

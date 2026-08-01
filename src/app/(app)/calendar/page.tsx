@@ -24,24 +24,27 @@ export default async function CalendarPage() {
 
   const [notesResult, moodsResult, photosResult] = await Promise.all([
     supabase
-      .from("calendar_notes").eq("couple_id", session.coupleId)
+      .from("calendar_notes")
       .select("id, date, note, user:users(username, display_name)")
+      .eq("couple_id", session.coupleId)
       .gte("date", threeMonthsAgo)
       .lte("date", twoMonthsLater)
       .order("date"),
     supabase
-      .from("moods").eq("couple_id", session.coupleId)
+      .from("moods")
       .select("date, mood_type, user:users(username, display_name)")
+      .eq("couple_id", session.coupleId)
       .gte("date", threeMonthsAgo)
       .lte("date", twoMonthsLater)
       .order("date"),
     supabase
-      .from("photo_archive").eq("couple_id", session.coupleId)
+      .from("photo_archive")
       .select(`
         id, user_id, image_url, storage_path, title, description,
         taken_date, taken_time, uploaded_at, exif_found, file_size,
         uploader:users(username, display_name)
       `)
+      .eq("couple_id", session.coupleId)
       .order("taken_date", { ascending: false })
       .order("taken_time", { ascending: false }),
   ]);

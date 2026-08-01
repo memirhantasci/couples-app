@@ -21,8 +21,9 @@ export default async function AdminCalendarEventsPage() {
   const supabase = createServerClient();
 
   const { data: eventsResult } = await supabase
-    .from("calendar_notes").eq("couple_id", session.coupleId)
+    .from("calendar_notes")
     .select("*, user:users(username, display_name)")
+      .eq("couple_id", session.coupleId)
     .order("date", { ascending: false });
 
   const events = (eventsResult as any) ?? [];

@@ -23,16 +23,18 @@ export default async function AdminPhotosPage() {
 
   const [photosResult, thisMonthResult] = await Promise.all([
     supabase
-      .from("photo_archive").eq("couple_id", session.coupleId)
+      .from("photo_archive")
       .select(`
         id, user_id, image_url, storage_path, title, description,
         taken_date, taken_time, uploaded_at, exif_found, file_size,
         uploader:users(username, display_name)
       `)
+      .eq("couple_id", session.coupleId)
       .order("uploaded_at", { ascending: false }),
     supabase
-      .from("photo_archive").eq("couple_id", session.coupleId)
+      .from("photo_archive")
       .select("id", { count: "exact" })
+      .eq("couple_id", session.coupleId)
       .gte("uploaded_at", thisMonthStart),
   ]);
 

@@ -27,27 +27,31 @@ export default async function HomePage() {
 
   const [moodResult, noteResult, meetingResult, pendingLettersResult] = await Promise.all([
     supabase
-      .from("moods").eq("couple_id", session.coupleId)
+      .from("moods")
       .select("mood_type")
+      .eq("couple_id", session.coupleId)
       .eq("user_id", session.userId)
       .eq("date", today)
       .single(),
     supabase
-      .from("daily_notes").eq("couple_id", session.coupleId)
+      .from("daily_notes")
       .select("content")
+      .eq("couple_id", session.coupleId)
       .eq("user_id", session.userId)
       .eq("date", today)
       .single(),
     supabase
-      .from("meetings").eq("couple_id", session.coupleId)
+      .from("meetings")
       .select("id, meeting_datetime, title")
+      .eq("couple_id", session.coupleId)
       .eq("is_active", true)
       .order("meeting_datetime", { ascending: true })
       .limit(1)
       .single(),
     supabase
-      .from("letters").eq("couple_id", session.coupleId)
+      .from("letters")
       .select("id, unlock_date, sender:users!letters_sender_id_fkey(username, display_name)")
+      .eq("couple_id", session.coupleId)
       .eq("receiver_id", session.userId)
       .gt("unlock_date", today)
       .order("unlock_date", { ascending: true }),
