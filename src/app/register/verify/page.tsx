@@ -42,145 +42,136 @@ export default function VerifyRegisterPage() {
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
         }}
       >
-        <a
-          href="/register"
-          className="flex items-center gap-2 mb-8 text-sm hover:opacity-70 transition-opacity w-fit"
-          style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}
-        >
-          <ArrowLeft size={18} /> Geri Dön
-        </a>
-
-        <div className="text-center mb-10">
+        {(state as any)?.success && (state as any)?.pairingCodeToDisplay ? (
           <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.15, type: "spring", stiffness: 250 }}
-            className="mb-5 flex justify-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full text-center flex flex-col items-center py-4"
           >
-            <ShieldCheck size={48} fill="rgba(232,0,45,0.2)" color="#E8002D" />
+            <Heart size={64} fill="#E8002D" color="#E8002D" className="mb-6 animate-pulse" />
+            <h2 className="text-2xl font-bold text-white mb-2">Hesap Onaylandı!</h2>
+            <p className="text-white/70 mb-6 text-sm">
+              Uygulamaya tek başına giriş yapamazsın. Sevgilinin seninle eşleşebilmesi için bu kodu ona gönder:
+            </p>
+            <div 
+              className="w-full text-center text-4xl font-mono font-bold tracking-widest py-6 rounded-2xl mb-8"
+              style={{
+                background: "rgba(245, 200, 66, 0.1)",
+                border: "2px dashed rgba(245, 200, 66, 0.5)",
+                color: "#F5C842"
+              }}
+            >
+              {(state as any).pairingCodeToDisplay}
+            </div>
+            <Link
+              href="/home"
+              className="w-full font-bold flex items-center justify-center py-4 rounded-2xl transition-all"
+              style={{
+                background: "#ffffff",
+                color: "#000000",
+                textDecoration: "none"
+              }}
+            >
+              Kodu Kopyaladım, Uygulamaya Geç
+            </Link>
           </motion.div>
-
-          <h1 className="text-2xl font-bold mb-3 text-white">
-            E-Posta Doğrulama
-          </h1>
-          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
-            Kayıt işlemini tamamlamak için e-posta adresinize gönderdiğimiz 6 haneli kodu giriniz. Bu cihaz güvenilir cihaz olarak kaydedilecektir.
-          </p>
-        </div>
-
-        <form action={formAction} className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <input
-              id="code"
-              name="code"
-              type="text"
-              placeholder="000000"
-              maxLength={6}
-              required
-              className="w-full text-center tracking-[0.5em] custom-placeholder"
-              style={{
-                paddingTop: 16,
-                paddingBottom: 16,
-                background: "rgba(0,0,0,0.25)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 20,
-                color: "#ffffff",
-                fontSize: 24,
-                fontWeight: "bold",
-                outline: "none",
-                fontFamily: "inherit",
-                WebkitAppearance: "none",
-                appearance: "none",
-                transition: "all 0.2s ease",
-              }}
-              autoComplete="one-time-code"
-            />
-          </div>
-
-          {/* Error */}
-          {(state as any)?.error && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm"
-              style={{
-                background: "rgba(232, 0, 45, 0.15)",
-                border: "1px solid rgba(232, 0, 45, 0.3)",
-                color: "#FF6B6B",
-              }}
+        ) : (
+          <>
+            <a
+              href="/register"
+              className="flex items-center gap-2 mb-8 text-sm hover:opacity-70 transition-opacity w-fit"
+              style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}
             >
-              <span>⚠️</span>
-              <span>{(state as any).error}</span>
-            </motion.div>
-          )}
+              <ArrowLeft size={18} /> Geri Dön
+            </a>
 
-          <motion.button
-            type="submit"
-            disabled={isPending}
-            className="w-full flex items-center justify-center gap-2 font-bold"
-            style={{
-              marginTop: "24px",
-              padding: "16px 24px",
-              borderRadius: 20,
-              background: "linear-gradient(135deg, #E8002D 0%, #C4001F 100%)",
-              color: "#ffffff",
-              fontSize: 16,
-              border: "none",
-              cursor: isPending ? "not-allowed" : "pointer",
-              opacity: isPending ? 0.7 : 1,
-              boxShadow: "0 4px 20px rgba(232,0,45,0.3)",
-            }}
-            whileHover={{ scale: isPending ? 1 : 1.01 }}
-            whileTap={{ scale: isPending ? 1 : 0.99 }}
-          >
-            {isPending ? "Doğrulanıyor..." : "Doğrula ve Kaydı Tamamla"}
-          </motion.button>
-        </form>
+            <div className="text-center mb-10">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.15, type: "spring", stiffness: 250 }}
+                className="mb-5 flex justify-center"
+              >
+                <ShieldCheck size={48} fill="rgba(232,0,45,0.2)" color="#E8002D" />
+              </motion.div>
 
-        {/* SUCCESS MODAL FOR PAIRING CODE */}
-        {(state as any)?.success && (state as any)?.pairingCodeToDisplay && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 z-50 flex items-center justify-center p-6"
-            style={{
-              background: "rgba(10, 10, 15, 0.95)",
-              backdropFilter: "blur(10px)"
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="w-full text-center flex flex-col items-center"
-            >
-              <Heart size={64} fill="#E8002D" color="#E8002D" className="mb-6 animate-pulse" />
-              <h2 className="text-2xl font-bold text-white mb-2">Hesap Onaylandı!</h2>
-              <p className="text-white/70 mb-6 text-sm">
-                Uygulamaya tek başına giriş yapamazsın. Sevgilinin seninle eşleşebilmesi için bu kodu ona gönder:
+              <h1 className="text-2xl font-bold mb-3 text-white">
+                E-Posta Doğrulama
+              </h1>
+              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
+                Kayıt işlemini tamamlamak için e-posta adresinize gönderdiğimiz 6 haneli kodu giriniz. Bu cihaz güvenilir cihaz olarak kaydedilecektir.
               </p>
-              <div 
-                className="w-full text-center text-4xl font-mono font-bold tracking-widest py-6 rounded-2xl mb-8"
-                style={{
-                  background: "rgba(245, 200, 66, 0.1)",
-                  border: "2px dashed rgba(245, 200, 66, 0.5)",
-                  color: "#F5C842"
-                }}
-              >
-                {(state as any).pairingCodeToDisplay}
+            </div>
+
+            <form action={formAction} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <input
+                  id="code"
+                  name="code"
+                  type="text"
+                  placeholder="000000"
+                  maxLength={6}
+                  required
+                  className="w-full text-center tracking-[0.5em] custom-placeholder"
+                  style={{
+                    paddingTop: 16,
+                    paddingBottom: 16,
+                    background: "rgba(0,0,0,0.25)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: 20,
+                    color: "#ffffff",
+                    fontSize: 24,
+                    fontWeight: "bold",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    WebkitAppearance: "none",
+                    appearance: "none",
+                    transition: "all 0.2s ease",
+                  }}
+                  autoComplete="one-time-code"
+                />
               </div>
-              <Link
-                href="/home"
-                className="w-full font-bold flex items-center justify-center py-4 rounded-2xl transition-all"
+
+              {/* Error */}
+              {(state as any)?.error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm"
+                  style={{
+                    background: "rgba(232, 0, 45, 0.15)",
+                    border: "1px solid rgba(232, 0, 45, 0.3)",
+                    color: "#FF6B6B",
+                  }}
+                >
+                  <span>⚠️</span>
+                  <span>{(state as any).error}</span>
+                </motion.div>
+              )}
+
+              <motion.button
+                type="submit"
+                disabled={isPending}
+                className="w-full flex items-center justify-center gap-2 font-bold"
                 style={{
-                  background: "#ffffff",
-                  color: "#000000",
-                  textDecoration: "none"
+                  marginTop: "24px",
+                  padding: "16px 24px",
+                  borderRadius: 20,
+                  background: "linear-gradient(135deg, #E8002D 0%, #C4001F 100%)",
+                  color: "#ffffff",
+                  fontSize: 16,
+                  border: "none",
+                  cursor: isPending ? "not-allowed" : "pointer",
+                  opacity: isPending ? 0.7 : 1,
+                  boxShadow: "0 4px 20px rgba(232,0,45,0.3)",
                 }}
+                whileHover={{ scale: isPending ? 1 : 1.01 }}
+                whileTap={{ scale: isPending ? 1 : 0.99 }}
               >
-                Kodu Kopyaladım, Uygulamaya Geç
-              </Link>
-            </motion.div>
-          </motion.div>
+                {isPending ? "Doğrulanıyor..." : "Doğrula ve Kaydı Tamamla"}
+              </motion.button>
+            </form>
+          </>
         )}
       </motion.div>
     </div>
