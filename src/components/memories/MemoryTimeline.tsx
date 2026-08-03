@@ -1,11 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus, Pencil } from "lucide-react";
 import { deleteMemoryAction } from "@/actions/memories";
 import { toast } from "sonner";
 import { dayjs } from "@/lib/date";
+import { useState } from "react";
+import { MemoryModal } from "./MemoryModal";
 
 interface Memory {
   id: number;
@@ -16,24 +18,16 @@ interface Memory {
   is_default?: boolean;
 }
 
-// Map memory titles to emojis to match the design exactly
-function getMemoryEmoji(title: string): string {
-  const t = title.toLowerCase();
-  if (t.includes("tanış")) return "💫";
-  if (t.includes("sevgili olduk")) return "💍";
-  if (t.includes("sevgililer")) return "💖";
-  if (t.includes("doğum")) return "🎂";
-  if (t.includes("halloween")) return "🎃";
-  if (t.includes("yılbaşı")) return "🎆";
-  return "✨";
-}
-
 interface MemoryTimelineProps {
   memories: Memory[];
   isAdmin: boolean;
 }
 
 export function MemoryTimeline({ memories, isAdmin }: MemoryTimelineProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
   async function handleDelete(id: number) {
     if (!confirm("Bu anıyı silmek istediğinize emin misiniz?")) return;
     const result = await deleteMemoryAction(id);
@@ -44,159 +38,223 @@ export function MemoryTimeline({ memories, isAdmin }: MemoryTimelineProps) {
     }
   }
 
-  if (memories.length === 0) {
-    return (
-      <div
-        className="flex flex-col items-center gap-3 py-16 rounded-[20px]"
-        style={{
-          background: "var(--surface-2)",
-          border: "1px dashed var(--border-default)",
-        }}
-      >
-        <span className="text-5xl">📸</span>
-        <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-          Henüz anı eklenmedi
-        </p>
-      </div>
-    );
+  function handleEdit(memory: Memory) {
+    setSelectedMemory(memory);
+    setIsModalOpen(true);
+  }
+
+  function handleAdd() {
+    setSelectedMemory(null);
+    setIsModalOpen(true);
   }
 
   return (
-    <div className="relative flex flex-col flex-1 justify-between min-h-full py-1 gap-6" style={{ paddingLeft: "8px" }}>
-      {/* Vertical glowing line */}
+    <>
       <div
-        className="absolute"
-        style={{
-          left: 30, // Center of the 44px circle (8px padding + 22px)
-          top: 0,
-          bottom: 0,
-          width: 2,
-          background: "linear-gradient(180deg, #FF416C 0%, #F09819 100%)",
-          boxShadow: "0 0 8px rgba(255, 65, 108, 0.5)",
-          zIndex: 0,
-        }}
-      />
-
-      {memories.map((memory, index) => {
-        const d = dayjs(memory.date);
-        const topDate = d.format("D MMMM"); // e.g., "19 Ocak"
-        const bottomDate = d.format("YYYY"); // e.g., "2026"
-
-        return (
-          <motion.div
-            key={memory.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.08, duration: 0.4 }}
-            className="relative flex items-center"
-            style={{ gap: "12px" }}
+        className="relative flex flex-col flex-1 min-h-full py-2 gap-4"
+        style={{ paddingLeft: "8px", paddingRight: "8px" }}
+      >
+        {/* Header — title centered on its own row, edit button on the row below, right-aligned */}
+        <div className="flex flex-col gap-2 mb-4 mt-2">
+          <h2
+            className="text-center w-full"
+            style={{
+              fontSize: 26,
+              fontWeight: 700,
+              color: "#FFFFFF",
+              letterSpacing: "0px",
+            }}
           >
-            {/* Horizontal Connection Line */}
-            <div 
-              className="absolute h-[2px] z-0" 
+            Özel Günler ❤️
+          </h2>
+          <div className="flex justify-end w-full">
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className="text-[15px] font-semibold px-6 py-[10px] rounded-full transition-colors"
               style={{
-                left: 22, // Center of date circle (44/2)
-                top: "50%",
-                width: 34, // 22px (half circle) + 12px (gap)
-                background: "linear-gradient(90deg, #FF416C 0%, rgba(255, 65, 108, 0.3) 100%)",
-                boxShadow: "0 0 8px rgba(255, 65, 108, 0.4)",
+                background: "#311822",
+                color: "#E5B9C5",
+              }}
+            >
+              {isEditMode ? "Bitti" : "Düzenle"}
+            </button>
+          </div>
+        </div>
+
+        {memories.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 py-16 rounded-[20px] mt-2"
+            style={{
+              background: "var(--surface-2)",
+              border: "1px dashed var(--border-default)",
+            }}
+          >
+            <span className="text-5xl">📸</span>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
+              Henüz anı eklenmedi
+            </p>
+          </div>
+        ) : (
+          <div className="relative flex-1 flex flex-col py-2">
+            {/* Vertical glowing line */}
+            <div
+              className="absolute"
+              style={{
+                left: 23,
+                top: 0,
+                bottom: 0,
+                width: 2,
+                background: "#FF2D55",
+                boxShadow: "0 0 10px #FF2D55",
+                zIndex: 0,
               }}
             />
 
-            {/* Glowing Date Circle */}
-            <div
-              className="relative z-10 flex-shrink-0 flex flex-col items-center justify-center rounded-full text-center"
-              style={{
-                width: 44,
-                height: 44,
-                background: "linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%)",
-                boxShadow: "0 0 12px rgba(255, 65, 108, 0.5)",
-                border: "2px solid rgba(255, 255, 255, 0.05)",
-              }}
-            >
-              <span className="text-[9px] font-bold leading-tight text-white">{topDate}</span>
-              <span className="text-[9px] font-bold leading-tight text-white">{bottomDate}</span>
-            </div>
+            <div className="flex flex-col justify-evenly flex-1">
+              {memories.map((memory, index) => {
+                const d = dayjs(memory.date);
+                const dayStr = d.format("DD");
+                const monthStr = d.format("MMM");
+                const yearStr = d.format("YYYY");
+                const canManage = isEditMode && !memory.is_default;
 
-            {/* Content Card */}
-            <div
-              className="flex-1 flex flex-col py-4 px-5 justify-center min-h-[88px] rounded-[20px] relative overflow-hidden"
-              style={{
-                background: "#16161a", // dark grey matching mockup
-                border: "1px solid rgba(255, 65, 108, 0.35)",
-                boxShadow: "0 0 12px rgba(255, 65, 108, 0.12)",
-              }}
-            >
-              {/* Inner subtle glow for the card */}
-              <div 
-                className="absolute inset-0 pointer-events-none" 
-                style={{
-                  background: "radial-gradient(circle at left, rgba(255,65,108,0.15) 0%, transparent 60%)"
-                }}
-              />
-
-              <div className="flex items-center gap-4">
-                {/* Emoji Icon Gradient Circle */}
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10"
-                  style={{
-                    background: "linear-gradient(135deg, #FF512F 0%, #F09819 100%)",
-                    fontSize: 24,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
-                  }}
-                >
-                  {getMemoryEmoji(memory.title)}
-                </div>
-
-                {/* Text Group */}
-                <div className="flex flex-col z-10 flex-1">
-                  <h3 className="font-bold text-white text-[19px] leading-tight mb-1">
-                    {memory.title}
-                  </h3>
-                  {memory.description && (
-                    <p
-                      className="text-[15px] leading-snug"
-                      style={{ color: "rgba(255,255,255,0.6)" }}
+                return (
+                  <motion.div
+                    key={memory.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.06, duration: 0.35 }}
+                    className="relative flex items-center py-3"
+                    style={{ gap: "16px" }}
+                  >
+                    {/* Date circle */}
+                    <div
+                      className="relative z-10 flex-shrink-0 flex flex-col items-center justify-center rounded-full text-center"
+                      style={{
+                        width: 48,
+                        height: 48,
+                        background: "#0A0A0C",
+                        border: "2px solid #FF2D55",
+                        boxShadow: "0 0 15px rgba(255, 45, 85, 0.4)",
+                      }}
                     >
-                      {memory.description.replace(/bebeğim/gi, "aşkım")}
-                    </p>
-                  )}
-                </div>
-              </div>
+                      <span className="text-[14px] font-bold leading-tight text-white">
+                        {dayStr}
+                      </span>
+                      <span className="text-[11px] font-medium leading-tight text-white">
+                        {monthStr}
+                      </span>
+                    </div>
 
-              {/* Image (preserves original functionality if they add one) */}
-              {memory.image_url && (
-                <div
-                  className="relative rounded-xl overflow-hidden mt-4 z-10"
-                  style={{ height: 180 }}
-                >
-                  <Image
-                    src={memory.image_url}
-                    alt={memory.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 500px) 100vw, 500px"
-                  />
-                </div>
-              )}
+                    {/* Card */}
+                    <div
+                      className="flex-1 flex flex-col justify-center min-h-[90px] rounded-[16px] px-5 py-4 relative overflow-hidden"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #1C1C1E 0%, #121214 100%)",
+                        border: "1px solid #FF2D55",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                      }}
+                    >
+                      <div className="flex items-start justify-between w-full">
+                        {/* Title + year */}
+                        <div className="flex flex-col z-10 min-w-0">
+                          <h3 className="font-bold text-white text-[20px] leading-tight mb-1 truncate">
+                            {memory.title}
+                          </h3>
+                          <span
+                            className="text-[14px] font-medium text-white"
+                            style={{ opacity: 0.9 }}
+                          >
+                            {yearStr}
+                          </span>
+                        </div>
 
-              {/* Admin delete button */}
-              {isAdmin && !memory.is_default && (
-                <button
-                  onClick={() => handleDelete(memory.id)}
-                  className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-lg transition-all z-20"
-                  style={{
-                    background: "rgba(255,65,108,0.1)",
-                    color: "rgba(255,65,108,0.7)",
-                  }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
+                        {/* Edit / Delete icons — bare, no background, only in edit mode */}
+                        <AnimatePresence>
+                          {canManage && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex flex-row gap-4 z-20 ml-2 flex-shrink-0"
+                            >
+                              <button
+                                onClick={() => handleEdit(memory)}
+                                aria-label="Anıyı düzenle"
+                                className="flex items-center justify-center transition-opacity hover:opacity-70"
+                              >
+                                <Pencil size={19} color="#FFFFFF" strokeWidth={2.5} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(memory.id)}
+                                aria-label="Anıyı sil"
+                                className="flex items-center justify-center transition-opacity hover:opacity-70"
+                              >
+                                <Trash2 size={19} color="#FFFFFF" strokeWidth={2.5} />
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {memory.image_url && (
+                        <div
+                          className="relative rounded-xl overflow-hidden mt-4 z-10"
+                          style={{ height: 160 }}
+                        >
+                          <Image
+                            src={memory.image_url}
+                            alt={memory.title}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 500px) 100vw, 500px"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </motion.div>
-        );
-      })}
-    </div>
+          </div>
+        )}
+
+        {/* Bottom "Add" button — smaller, tidier, only in edit mode */}
+        <AnimatePresence>
+          {isEditMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.25 }}
+              className="mt-2 mb-6 pb-20 flex justify-center w-full"
+            >
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={handleAdd}
+                className="flex items-center justify-center gap-2 font-semibold rounded-full shadow-md transition-all"
+                style={{
+                  background: "#FF3B30",
+                  color: "#fff",
+                  fontSize: "14px",
+                  padding: "10px 22px",
+                }}
+              >
+                <Plus size={16} strokeWidth={2.5} />
+                Yeni Özel Gün Ekle
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <MemoryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        memory={selectedMemory}
+      />
+    </>
   );
 }
