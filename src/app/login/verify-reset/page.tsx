@@ -4,13 +4,24 @@ import { useActionState } from "react";
 import { verifyResetAction } from "@/actions/auth";
 import { KeyRound, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const initialState = {};
 
 export default function VerifyResetPage() {
   const [state, formAction, isPending] = useActionState(verifyResetAction, initialState);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const otp = params.get('devOtp');
+      if (otp) {
+        console.log("%c--- GELEN DOĞRULAMA KODU ---", "color: #E8002D; font-weight: bold; font-size: 16px;");
+        console.log(`%cKOD: ${otp}`, "color: #F5C842; font-weight: bold; font-size: 24px;");
+      }
+    }
+  }, []);
 
   return (
     <div

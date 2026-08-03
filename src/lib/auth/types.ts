@@ -1,6 +1,7 @@
 export interface SessionData {
   userId: number;
   coupleId: number | null;
+  isPaired: boolean;
   username: string;
   displayName: string;
   role: "ADMIN" | "USER";
@@ -11,6 +12,7 @@ export interface SessionData {
 export interface SessionCookie {
   userId: number;
   coupleId: number | null;
+  isPaired: boolean;
   username: string;
   displayName: string;
   role: "ADMIN" | "USER";
@@ -21,3 +23,4 @@ export interface SessionCookie {
 
 export const SESSION_COOKIE_NAME = "couples_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year, expiration handled internally
+

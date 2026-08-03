@@ -29,6 +29,17 @@ export interface LoginState {
   pairingCodeToDisplay?: string;
 }
 
+// Helper: check if a couple is paired (has 2 members)
+async function getCoupleIsPaired(coupleId: number): Promise<boolean> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("couples")
+    .select("is_paired")
+    .eq("id", coupleId)
+    .single();
+  return data?.is_paired ?? false;
+}
+
 export async function loginAction(
   prevState: LoginState,
   formData: FormData
@@ -143,6 +154,7 @@ export async function loginAction(
       await createSession({
         userId: user.id,
         coupleId: user.couple_id,
+        isPaired: true, // Admin always paired
         username: deterministicDecrypt(user.username) || user.username,
         displayName: user.display_name || deterministicDecrypt(user.username) || user.username,
         role: user.role as "ADMIN" | "USER",
@@ -180,8 +192,13 @@ export async function loginAction(
            });
         }
 
-        // Send email
+        // Send email (TEMPORARILY DISABLED)
         try {
+          console.log("-----------------------------------------");
+          console.log("OTP CODE (LOGIN):", otpCode);
+          console.log("-----------------------------------------");
+          
+          /* 
           const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || "smtp.gmail.com",
             port: parseInt(process.env.SMTP_PORT || "587"),
@@ -203,6 +220,7 @@ export async function loginAction(
           } else {
               console.log("NO SMTP CONFIGURED. OTP CODE IS:", otpCode);
           }
+          */
         } catch (e) {
           console.error("Email send error:", e);
           console.log("FALLBACK OTP CODE IS:", otpCode);
@@ -214,7 +232,7 @@ export async function loginAction(
         cookieStore.set("pending_login_ip", ipAddress, { httpOnly: true, maxAge: 600 });
         cookieStore.set("pending_login_ua", userAgent, { httpOnly: true, maxAge: 600 });
         
-        nextUrl = "/login/verify-device";
+        nextUrl = "/login/verify-device?devOtp=" + otpCode;
       } else if (deviceAuth && deviceAuth.is_verified) {
         // Device is verified, proceed to login
         const { data: loginLog } = await supabase
@@ -232,9 +250,13 @@ export async function loginAction(
         const nowTR = new Date(Date.now() + 3 * 60 * 60 * 1000);
         const today = nowTR.toISOString().slice(0, 10);
 
+        // Check pairing status
+        const isPaired = user.couple_id ? await getCoupleIsPaired(user.couple_id) : false;
+
         await createSession({
           userId: user.id,
           coupleId: user.couple_id,
+          isPaired,
           username: deterministicDecrypt(user.username) || user.username,
           displayName: user.display_name || deterministicDecrypt(user.username) || user.username,
           role: user.role as "ADMIN" | "USER",
@@ -242,7 +264,7 @@ export async function loginAction(
           loginLogId: loginLog?.id ?? 0,
         });
         
-        nextUrl = "/home";
+        nextUrl = isPaired ? "/home" : "/pairing";
       }
     }
   } catch (err: any) {
@@ -300,8 +322,13 @@ export async function setupEmailAction(prevState: any, formData: FormData) {
        });
     }
 
-    // Send email
+    // Send email (TEMPORARILY DISABLED)
     try {
+      console.log("-----------------------------------------");
+      console.log("OTP CODE (SETUP EMAIL):", otpCode);
+      console.log("-----------------------------------------");
+
+      /*
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || "smtp.gmail.com",
         port: parseInt(process.env.SMTP_PORT || "587"),
@@ -322,6 +349,7 @@ export async function setupEmailAction(prevState: any, formData: FormData) {
       } else {
           console.log("NO SMTP CONFIGURED. OTP CODE IS:", otpCode);
       }
+      */
     } catch (e) {
       console.error("Email send error:", e);
     }
@@ -335,7 +363,7 @@ export async function setupEmailAction(prevState: any, formData: FormData) {
     cookieStore.set("pending_login_ip", ipAddress, { httpOnly: true, maxAge: 600 });
     cookieStore.set("pending_setup_email_value", encryptedEmail, { httpOnly: true, maxAge: 600 });
     
-    nextUrl = "/login/verify-device";
+    nextUrl = "/login/verify-device?devOtp=" + otpCode;
   } catch (err: any) {
     console.error("Error in setupEmailAction:", err);
     return { error: "Bir hata oluştu." };
@@ -420,9 +448,13 @@ export async function verifyDeviceAction(prevState: any, formData: FormData) {
   const nowTR = new Date(Date.now() + 3 * 60 * 60 * 1000);
   const today = nowTR.toISOString().slice(0, 10);
 
+  // Check pairing status
+  const isPairedDevice = user.couple_id ? await getCoupleIsPaired(user.couple_id) : false;
+
   await createSession({
     userId: user.id,
     coupleId: user.couple_id,
+    isPaired: user.role === "ADMIN" ? true : isPairedDevice,
     username: deterministicDecrypt(user.username) || user.username,
     displayName: user.display_name || deterministicDecrypt(user.username) || user.username,
     role: user.role as "ADMIN" | "USER",
@@ -434,7 +466,7 @@ export async function verifyDeviceAction(prevState: any, formData: FormData) {
   cookieStore.delete("pending_login_ip");
   cookieStore.delete("pending_login_ua");
   
-  let nextUrl = user.role === "ADMIN" ? "/admin" : "/home";
+  let nextUrl = user.role === "ADMIN" ? "/admin" : (isPairedDevice ? "/home" : "/pairing");
   redirect(nextUrl);
 }
 
@@ -594,8 +626,13 @@ export async function registerAction(
     is_verified: false
   });
 
-  // Send Email
+  // Send Email (TEMPORARILY DISABLED)
   try {
+    console.log("-----------------------------------------");
+    console.log("OTP CODE (REGISTER):", otpCode);
+    console.log("-----------------------------------------");
+
+    /*
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
@@ -616,6 +653,7 @@ export async function registerAction(
     } else {
         console.log("NO SMTP CONFIGURED. REGISTRATION OTP CODE IS:", otpCode);
     }
+    */
   } catch (e) {
     console.error("Email send error:", e);
     console.log("FALLBACK REGISTRATION OTP CODE IS:", otpCode);
@@ -629,7 +667,7 @@ export async function registerAction(
     cookieStore.set("pending_register_pairing_code", generatedCode, { httpOnly: true, maxAge: 600 });
   }
 
-  redirect("/register/verify");
+  redirect("/register/verify?devOtp=" + otpCode);
 }
 
 export async function verifyRegisterAction(prevState: any, formData: FormData) {
@@ -700,9 +738,13 @@ export async function verifyRegisterAction(prevState: any, formData: FormData) {
   const nowTR = new Date(Date.now() + 3 * 60 * 60 * 1000);
   const today = nowTR.toISOString().slice(0, 10);
 
+  // Check pairing status after verify
+  const isPairedReg = user.couple_id ? await getCoupleIsPaired(user.couple_id) : false;
+
   await createSession({
     userId: user.id,
     coupleId: user.couple_id,
+    isPaired: isPairedReg,
     username: deterministicDecrypt(user.username) || user.username,
     displayName: user.display_name || deterministicDecrypt(user.username) || user.username,
     role: user.role as "ADMIN" | "USER",
@@ -716,10 +758,12 @@ export async function verifyRegisterAction(prevState: any, formData: FormData) {
   cookieStore.delete("pending_register_pairing_code");
   
   if (pendingPairingCode) {
+    // 1. kullanıcı: kodu göster, /pairing'e yönlendir
     return { success: true, pairingCodeToDisplay: pendingPairingCode };
   }
 
-  redirect("/home");
+  // 2. kullanıcı: eşleşme kodunu girmiş, paired ise /home, değilse /pairing
+  redirect(isPairedReg ? "/home" : "/pairing");
 }
 export async function changePasswordAction(prevState: LoginState, formData: FormData): Promise<LoginState> {
   const username = formData.get("username") as string;
@@ -763,8 +807,13 @@ export async function changePasswordAction(prevState: LoginState, formData: Form
     expires_at: expiresAt.toISOString(),
   });
 
-  // Send email
+  // Send email (TEMPORARILY DISABLED)
   try {
+    console.log("-----------------------------------------");
+    console.log("OTP CODE (RESET PASSWORD):", otpCode);
+    console.log("-----------------------------------------");
+
+    /*
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
@@ -785,6 +834,7 @@ export async function changePasswordAction(prevState: LoginState, formData: Form
     } else {
         console.log("NO SMTP CONFIGURED. OTP CODE IS:", otpCode);
     }
+    */
   } catch (e) {
     console.error("Email send error:", e);
     console.log("FALLBACK OTP CODE IS:", otpCode);
@@ -793,7 +843,7 @@ export async function changePasswordAction(prevState: LoginState, formData: Form
   const cookieStore = await cookies();
   cookieStore.set("pending_reset_user_id", user.id, { httpOnly: true, maxAge: 600 });
 
-  redirect("/login/verify-reset");
+  redirect("/login/verify-reset?devOtp=" + otpCode);
 }
 
 
@@ -858,3 +908,105 @@ export async function verifyResetAction(prevState: any, formData: FormData) {
   redirect("/login?reset=success");
 }
 
+// ============================================================
+// PAIRING SYSTEM — Server Actions
+// ============================================================
+
+export async function getPairingStatus() {
+  const session = await getSession();
+  if (!session || !session.coupleId) {
+    return { isPaired: false, pairingCode: null };
+  }
+
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("couples")
+    .select("pairing_code, is_paired")
+    .eq("id", session.coupleId)
+    .single();
+
+  if (!data) {
+    return { isPaired: false, pairingCode: null };
+  }
+
+  // If newly paired, update the session so middleware lets them through
+  if (data.is_paired && !session.isPaired) {
+    await createSession({
+      userId: session.userId,
+      coupleId: session.coupleId,
+      isPaired: true,
+      username: session.username,
+      displayName: session.displayName,
+      role: session.role,
+      loginDate: session.loginDate,
+      loginLogId: session.loginLogId,
+    });
+  }
+
+  return {
+    isPaired: data.is_paired ?? false,
+    pairingCode: data.pairing_code ?? null,
+  };
+}
+
+export async function submitPairingCodeAction(
+  prevState: any,
+  formData: FormData
+) {
+  const session = await getSession();
+  if (!session) {
+    return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+  }
+
+  const code = (formData.get("pairingCode") as string)?.trim().toUpperCase();
+  if (!code || code.length < 4) {
+    return { error: "Geçerli bir eşleşme kodu giriniz." };
+  }
+
+  const supabase = createServerClient();
+
+  try {
+    const { data, error } = await supabase.rpc("join_couple_by_code", {
+      p_code: code,
+      p_user_id: session.userId,
+    });
+
+    if (error) {
+      const msg = error.message || "";
+      if (msg.includes("INVALID_CODE")) return { error: "Girdiğiniz eşleşme kodu geçersiz veya kullanım dışıdır." };
+      if (msg.includes("CODE_ALREADY_USED")) return { error: "Bu eşleşme kodu daha önce kullanılmıştır." };
+      if (msg.includes("SELF_CODE")) return { error: "Kendi eşleşme kodunuzu kullanamazsınız." };
+      if (msg.includes("COUPLE_FULL")) return { error: "Bu eşleşme kodu artık kullanılamıyor." };
+      console.error("submitPairingCodeAction RPC error:", error);
+      return { error: "Bir hata oluştu, tekrar deneyin." };
+    }
+
+    // RPC returns array with one row
+    const result = Array.isArray(data) ? data[0] : data;
+    const newCoupleId = result?.result_couple_id;
+    const newIsPaired = result?.result_is_paired ?? false;
+
+    // Update session with new couple
+    await createSession({
+      userId: session.userId,
+      coupleId: newCoupleId,
+      isPaired: newIsPaired,
+      username: session.username,
+      displayName: session.displayName,
+      role: session.role,
+      loginDate: session.loginDate,
+      loginLogId: session.loginLogId,
+    });
+
+    if (newIsPaired) {
+      redirect("/home");
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    // redirect() throws NEXT_REDIRECT — let it propagate
+    if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    console.error("submitPairingCodeAction unexpected error:", err);
+    return { error: "Bir hata oluştu, tekrar deneyin." };
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { verifyDeviceAction } from "@/actions/auth";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
@@ -9,6 +9,17 @@ const initialState = {};
 
 export default function VerifyDevicePage() {
   const [state, formAction, isPending] = useActionState(verifyDeviceAction, initialState);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const otp = params.get('devOtp');
+      if (otp) {
+        console.log("%c--- GELEN DOĞRULAMA KODU ---", "color: #E8002D; font-weight: bold; font-size: 16px;");
+        console.log(`%cKOD: ${otp}`, "color: #F5C842; font-weight: bold; font-size: 24px;");
+      }
+    }
+  }, []);
 
   return (
     <div

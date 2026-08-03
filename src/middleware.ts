@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, type SessionCookie } from "@/lib/auth/types";
 
-// Routes that require authentication
-const PROTECTED_ROUTES = ["/home", "/medicine", "/memories", "/calendar", "/admin", "/photos"];
+// Routes that require authentication AND completed pairing
+const PROTECTED_ROUTES = ["/home", "/medicine", "/memories", "/calendar", "/admin", "/photos", "/letters", "/daily-notes-user", "/period-tracker"];
 // Routes that require ADMIN role
 const ADMIN_ROUTES = ["/admin"];
 
@@ -14,7 +14,10 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
     pathname === "/favicon.ico" ||
-    pathname === "/login"
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/register" ||
+    pathname.startsWith("/register/")
   ) {
     return NextResponse.next();
   }
@@ -28,7 +31,7 @@ export function middleware(request: NextRequest) {
 
   // No cookie → redirect to login
   if (!cookieValue) {
-    if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
+    if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route)) || pathname === "/pairing") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
@@ -57,6 +60,22 @@ export function middleware(request: NextRequest) {
   // ─── ADMIN ROUTE PROTECTION ────────────────────────────────────────────────
   if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
     if (session.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
+  }
+
+  // ─── PAIRING CHECK ─────────────────────────────────────────────────────────
+  // Skip pairing check for admins
+  if (session.role !== "ADMIN") {
+    // If user is trying to access a protected route but is NOT paired → send to /pairing
+    if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
+      if (!session.isPaired) {
+        return NextResponse.redirect(new URL("/pairing", request.url));
+      }
+    }
+
+    // If user is already paired and tries to go to /pairing → send to /home
+    if (pathname === "/pairing" && session.isPaired) {
       return NextResponse.redirect(new URL("/home", request.url));
     }
   }
