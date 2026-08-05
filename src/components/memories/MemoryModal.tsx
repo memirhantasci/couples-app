@@ -20,7 +20,8 @@ interface MemoryModalProps {
 }
 
 export function MemoryModal({ isOpen, onClose, memory }: MemoryModalProps) {
-  const [state, formAction, isPending] = useActionState(saveMemoryAction, {});
+  const initialState: { error?: string; success?: boolean } = {};
+  const [state, formAction, isPending] = useActionState(saveMemoryAction, initialState);
 
   // Local state for controlled inputs to allow prepopulating for Edit mode
   const [dateVal, setDateVal] = useState("");
