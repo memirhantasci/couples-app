@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useActionState } from "react";
-import { createMemoryAction } from "@/actions/memories";
+import { saveMemoryAction } from "@/actions/memories";
 import { toast } from "sonner";
 import { Plus, Upload, Camera } from "lucide-react";
 
@@ -13,7 +13,7 @@ export function AddMemoryForm() {
   const initialState: { error?: string; success?: boolean } = {};
   const [state, formAction, isPending] = useActionState(
     async (prev: { error?: string; success?: boolean }, formData: FormData) => {
-      const result = await createMemoryAction(prev, formData);
+      const result = await saveMemoryAction(prev, formData);
       if (result.success) {
         toast.success("Anı başarıyla eklendi! 📸");
         formRef.current?.reset();

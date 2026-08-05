@@ -79,6 +79,9 @@ export async function saveMemoryAction(
   return { success: true };
 }
 
+export const createMemoryAction = saveMemoryAction;
+export const updateMemoryAction = saveMemoryAction;
+
 export async function deleteMemoryAction(id: number) {
   const session = await getSession();
   if (!session || !session.coupleId) {
