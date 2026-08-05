@@ -14,7 +14,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh">
       {/* Top Header & Drawer */}
-      <TopHeader role={session.role} displayName={displayName} />
+      <TopHeader role={session.role} displayName={displayName} partnerName={session.partnerName} />
 
       {/* Main Content */}
       <main

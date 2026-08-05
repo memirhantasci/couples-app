@@ -2,15 +2,34 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
 
-export const metadata: Metadata = {
-  title: "Emirhan & Öykü 💕",
-  description: "Emirhan ve Öykü'nün özel platformu — anılar, ilaç takibi, takvim ve daha fazlası.",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Emirhan & Öykü 💕",
-  },
-};
+import { getSession } from "@/lib/auth/session";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await getSession();
+  
+  let title = "Couples App 💕";
+  let description = "Çiftlerin özel platformu — anılar, ilaç takibi, takvim ve daha fazlası.";
+  
+  if (session && session.partnerName) {
+    const dName = session.displayName || (session.username.charAt(0).toUpperCase() + session.username.slice(1));
+    title = `${dName} & ${session.partnerName} 💕`;
+    description = `${dName} ve ${session.partnerName}'nin özel platformu — anılar, ilaç takibi, takvim ve daha fazlası.`;
+  } else if (session) {
+    const dName = session.displayName || (session.username.charAt(0).toUpperCase() + session.username.slice(1));
+    title = `${dName} & Partneri 💕`;
+    description = `${dName} ve Partnerinin özel platformu — anılar, ilaç takibi, takvim ve daha fazlası.`;
+  }
+
+  return {
+    title,
+    description,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

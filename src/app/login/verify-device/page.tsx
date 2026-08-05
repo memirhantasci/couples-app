@@ -60,7 +60,7 @@ export default function VerifyDevicePage() {
           <ArrowLeft size={18} /> Geri Dön
         </a>
 
-        <div className="text-center mb-10">
+        <div className="text-center" style={{ marginBottom: 36 }}>
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -70,7 +70,7 @@ export default function VerifyDevicePage() {
             <ShieldCheck size={48} fill="rgba(232,0,45,0.2)" color="#E8002D" />
           </motion.div>
 
-          <h1 className="text-2xl font-bold mb-3 text-white">
+          <h1 className="text-2xl font-bold text-white" style={{ marginBottom: 20 }}>
             Yeni Cihaz Tespit Edildi
           </h1>
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>

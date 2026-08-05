@@ -4,6 +4,9 @@ export interface SessionData {
   isPaired: boolean;
   username: string;
   displayName: string;
+  partnerName?: string;
+  meetDate?: string | null;
+  relationshipStartDate?: string | null;
   role: "ADMIN" | "USER";
   loginDate: string; // YYYY-MM-DD
   loginLogId: number;
@@ -15,6 +18,9 @@ export interface SessionCookie {
   isPaired: boolean;
   username: string;
   displayName: string;
+  partnerName?: string;
+  meetDate?: string | null;
+  relationshipStartDate?: string | null;
   role: "ADMIN" | "USER";
   loginDate: string;
   loginLogId: number;

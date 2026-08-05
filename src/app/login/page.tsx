@@ -89,7 +89,7 @@ function LoginForm() {
                     backgroundClip: "text",
                   }}
                 >
-                  Emirhan &amp; Öykü
+                  Couples App
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15 }}>
                   Özel platformunuza hoş geldiniz

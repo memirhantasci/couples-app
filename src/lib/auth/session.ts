@@ -1,14 +1,50 @@
 import { cookies } from "next/headers";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE, type SessionCookie } from "./types";
 import { createServerClient } from "@/lib/supabase/server";
+import { deterministicDecrypt } from "@/utils/crypto";
 
 /**
  * Creates a session cookie with the given session data
  */
-export async function createSession(data: Omit<SessionCookie, "expiresAt">): Promise<void> {
+export async function createSession(data: Omit<SessionCookie, "expiresAt" | "partnerName" | "meetDate" | "relationshipStartDate">): Promise<void> {
   const cookieStore = await cookies();
+  const supabase = createServerClient();
+  
+  let partnerName = undefined;
+  let meetDate = undefined;
+  let relationshipStartDate = undefined;
+
+  if (data.coupleId) {
+    // Get couple dates
+    const { data: coupleInfo } = await supabase
+      .from("couples")
+      .select("meet_date, relationship_start_date")
+      .eq("id", data.coupleId)
+      .maybeSingle();
+
+    if (coupleInfo) {
+      meetDate = coupleInfo.meet_date;
+      relationshipStartDate = coupleInfo.relationship_start_date;
+    }
+
+    // Get partner name
+    const { data: partnerInfo } = await supabase
+      .from("users")
+      .select("display_name, username")
+      .eq("couple_id", data.coupleId)
+      .neq("id", data.userId)
+      .maybeSingle();
+      
+    if (partnerInfo) {
+       partnerName = partnerInfo.display_name || deterministicDecrypt(partnerInfo.username) || partnerInfo.username;
+    }
+  }
+
   const sessionData: SessionCookie = {
     ...data,
+    partnerName,
+    meetDate,
+    relationshipStartDate,
     expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes from now
   };
   const payload = JSON.stringify(sessionData);

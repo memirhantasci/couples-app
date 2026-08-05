@@ -92,16 +92,16 @@ export default function PairingPage() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-            className="mb-4"
+            style={{ marginBottom: 20 }}
           >
             <Heart size={48} fill="#E8002D" color="#E8002D" />
           </motion.div>
 
           {/* Title */}
-          <h1 className="text-2xl font-bold text-white mb-2">Eşleşme Bekleniyor</h1>
+          <h1 className="text-2xl font-bold text-white" style={{ marginBottom: 18 }}>Eşleşme Bekleniyor</h1>
 
           {/* Description */}
-          <p className="text-sm mb-6 leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.7)", marginBottom: 28 }}>
             Sevgilinin seninle eşleşebilmesi için<br />
             bu kodu ona gönder:
           </p>

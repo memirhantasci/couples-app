@@ -5,10 +5,12 @@ import { verifyRegisterAction } from "@/actions/auth";
 import { Heart, Copy, Check, ShieldCheck, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const initialState = {};
 
 export default function VerifyRegisterPage() {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(verifyRegisterAction, initialState);
   const [copied, setCopied] = useState(false);
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
@@ -29,6 +31,13 @@ export default function VerifyRegisterPage() {
       }
     }
   }, []);
+
+  // Handle successful verification redirect
+  useEffect(() => {
+    if ((state as any)?.redirectUrl) {
+      router.push((state as any).redirectUrl);
+    }
+  }, [state, router]);
 
   // Sync digits to hidden input
   useEffect(() => {
@@ -135,8 +144,9 @@ export default function VerifyRegisterPage() {
 
               {/* Pairing Code Box with Copy */}
               <div
-                className="w-full mb-8"
+                className="w-full"
                 style={{
+                  marginBottom: 28,
                   padding: "18px 20px",
                   border: "2px dashed rgba(245, 200, 66, 0.5)",
                   borderRadius: 16,
@@ -236,7 +246,7 @@ export default function VerifyRegisterPage() {
               </a>
 
               {/* Header */}
-              <div className="text-center mb-10">
+              <div className="text-center" style={{ marginBottom: 36 }}>
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -246,7 +256,7 @@ export default function VerifyRegisterPage() {
                   <ShieldCheck size={48} fill="rgba(232,0,45,0.2)" color="#E8002D" />
                 </motion.div>
 
-                <h1 className="text-2xl font-bold mb-3 text-white">
+                <h1 className="text-2xl font-bold text-white" style={{ marginBottom: 20 }}>
                   E-Posta Doğrulama
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.6 }}>
@@ -332,7 +342,7 @@ export default function VerifyRegisterPage() {
                   disabled={isPending}
                   className="w-full flex items-center justify-center gap-2 font-bold"
                   style={{
-                    marginTop: "8px",
+                    marginTop: 28,
                     padding: "16px 24px",
                     borderRadius: 20,
                     background: "linear-gradient(135deg, #E8002D 0%, #C4001F 100%)",

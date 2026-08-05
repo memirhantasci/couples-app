@@ -58,8 +58,8 @@ export default async function HomePage() {
   ]);
 
   const hitap = getTodayHitap();
-  const daysSinceMeeting = daysSince(dayjs("2026-01-19"));
-  const daysSinceTogether = daysSince(dayjs("2026-01-26"));
+  const daysSinceMeeting = session.meetDate ? daysSince(dayjs(session.meetDate)) : 0;
+  const daysSinceTogether = session.relationshipStartDate ? daysSince(dayjs(session.relationshipStartDate)) : 0;
   const loveMeter = getLoveMeter();
   const quote = getQuoteForDay(doy);
   const currentMood = moodResult.data?.mood_type ?? null;

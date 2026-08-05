@@ -757,13 +757,8 @@ export async function verifyRegisterAction(prevState: any, formData: FormData) {
   cookieStore.delete("pending_register_ua");
   cookieStore.delete("pending_register_pairing_code");
   
-  if (pendingPairingCode) {
-    // 1. kullanıcı: kodu göster, /pairing'e yönlendir
-    return { success: true, pairingCodeToDisplay: pendingPairingCode };
-  }
-
-  // 2. kullanıcı: eşleşme kodunu girmiş, paired ise /home, değilse /pairing
-  redirect(isPairedReg ? "/home" : "/pairing");
+  // Eşleşme durumu kontrolüne göre yönlendir
+  return { redirectUrl: isPairedReg ? "/home" : "/pairing" };
 }
 export async function changePasswordAction(prevState: LoginState, formData: FormData): Promise<LoginState> {
   const username = formData.get("username") as string;

@@ -50,9 +50,10 @@ const adminNavItems: NavItem[] = [
 interface TopHeaderProps {
   role: "ADMIN" | "USER";
   displayName: string;
+  partnerName?: string;
 }
 
-export function TopHeader({ role, displayName }: TopHeaderProps) {
+export function TopHeader({ role, displayName, partnerName }: TopHeaderProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isAppMenuExpanded, setIsAppMenuExpanded] = useState(false);
@@ -98,7 +99,7 @@ export function TopHeader({ role, displayName }: TopHeaderProps) {
               textShadow: "0 0 12px rgba(255, 105, 180, 0.8), 0 0 20px rgba(255, 105, 180, 0.4)"
             }}
           >
-            Emirhan &amp; Öykü
+            {partnerName ? `${displayName} & ${partnerName}` : `${displayName} & Partnerin`}
           </span>
           <span style={{ fontSize: 18 }}>❤️</span>
         </Link>
@@ -286,7 +287,7 @@ export function TopHeader({ role, displayName }: TopHeaderProps) {
                       className="text-center font-serif text-[28px] font-bold mb-8"
                       style={{ color: "#e3ba74" }}
                     >
-                      🤎Emirhan &amp; Öykü🤎
+                      🤎{partnerName ? `${displayName} & ${partnerName}` : `${displayName} & Partnerin`}🤎
                     </h2>
 
                     <div className="flex flex-col gap-2 flex-1 overflow-y-auto pb-4" style={{ WebkitOverflowScrolling: "touch" }}>

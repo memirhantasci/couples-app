@@ -31,7 +31,7 @@ export function middleware(request: NextRequest) {
 
   // No cookie → redirect to login
   if (!cookieValue) {
-    if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route)) || pathname === "/pairing") {
+    if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route)) || pathname === "/pairing" || pathname === "/setup") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
@@ -64,19 +64,33 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // ─── PAIRING CHECK ─────────────────────────────────────────────────────────
+  // ─── PAIRING AND SETUP CHECK ─────────────────────────────────────────────────────────
   // Skip pairing check for admins
   if (session.role !== "ADMIN") {
-    // If user is trying to access a protected route but is NOT paired → send to /pairing
+    // Accessing protected route
     if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
       if (!session.isPaired) {
         return NextResponse.redirect(new URL("/pairing", request.url));
       }
+      // If paired but missing dates
+      if (session.isPaired && !session.meetDate) {
+        return NextResponse.redirect(new URL("/setup", request.url));
+      }
     }
 
-    // If user is already paired and tries to go to /pairing → send to /home
+    // Accessing /pairing
     if (pathname === "/pairing" && session.isPaired) {
-      return NextResponse.redirect(new URL("/home", request.url));
+      return NextResponse.redirect(new URL(session.meetDate ? "/home" : "/setup", request.url));
+    }
+
+    // Accessing /setup
+    if (pathname === "/setup") {
+      if (!session.isPaired) {
+        return NextResponse.redirect(new URL("/pairing", request.url));
+      }
+      if (session.meetDate) {
+        return NextResponse.redirect(new URL("/home", request.url));
+      }
     }
   }
 
