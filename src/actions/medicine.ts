@@ -12,7 +12,7 @@ const medicineSchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçersiz tarih formatı."),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçersiz tarih formatı."),
   times: z.array(z.string().regex(/^\d{2}:\d{2}$/, "Geçersiz saat formatı.")).min(1, "En az 1 alım saati eklenmeli."),
-  user_id: z.number().positive("Lütfen bir kullanıcı seçin."),
+  is_partner: z.boolean().optional(),
 });
 
 // ─── Create Medicine (Admin only) ─────────────────────────────────────────────
@@ -34,7 +34,7 @@ export async function createMedicineAction(
     start_date: formData.get("start_date"),
     end_date: formData.get("end_date"),
     times: rawTimes,
-    user_id: Number(formData.get("user_id")),
+    is_partner: formData.get("is_partner") === "true",
   };
 
   const parsed = medicineSchema.safeParse(rawData);
@@ -42,17 +42,28 @@ export async function createMedicineAction(
     return { error: parsed.error.errors[0].message };
   }
 
+  const supabase = createServerClient();
+  
+  let targetUserId = session.userId;
+  if (parsed.data.is_partner) {
+    const { data: partner } = await supabase.from("users").select("id").eq("couple_id", session.coupleId).neq("id", session.userId).single();
+    if (partner) {
+      targetUserId = partner.id;
+    } else {
+      return { error: "Partner bulunamadı." };
+    }
+  }
+
   const sortedTimes = [...parsed.data.times].sort();
   const primaryTime = sortedTimes[0];
 
-  const supabase = createServerClient();
   const { error } = await supabase.from("medicines").insert({
     name: parsed.data.name,
     start_date: parsed.data.start_date,
     end_date: parsed.data.end_date,
     time: primaryTime,
     times: sortedTimes,
-    user_id: parsed.data.user_id,
+    user_id: targetUserId,
     is_active: true,
     couple_id: session.coupleId,
   });
@@ -96,20 +107,36 @@ export async function updateMedicineLogAction(
     }
   }
 
-  const { error } = await supabase.from("medicine_logs").upsert(
-    {
-      user_id: session.userId,
-      medicine_id: medicineId,
-      date: today,
-      time: slotTime,
-      status,
+  const { data: existing } = await supabase
+    .from("medicine_logs")
+    .select("id")
+    .eq("medicine_id", medicineId)
+    .eq("date", today)
+    .eq("user_id", session.userId)
+    .eq("time", slotTime)
+    .single();
+
+  let error;
+  if (existing) {
+    const updatePayload = {
+      status: status ?? "PENDING",
       taken_at: status === "DRANK" ? new Date().toISOString() : null,
-      couple_id: session.coupleId,
-    },
-    {
-      onConflict: "medicine_id,date,user_id,time",
-    }
-  );
+    };
+    const res = await supabase.from("medicine_logs").update(updatePayload).eq("id", existing.id);
+    error = res.error;
+  } else {
+    const insertPayload = {
+      user_id: session.userId ?? null,
+      medicine_id: medicineId ?? null,
+      date: today ?? null,
+      time: slotTime ?? "08:00",
+      status: status ?? "PENDING",
+      taken_at: status === "DRANK" ? new Date().toISOString() : null,
+      couple_id: session.coupleId ?? null,
+    };
+    const res = await supabase.from("medicine_logs").insert(insertPayload);
+    error = res.error;
+  }
 
   if (error) {
     return { error: "Kayıt güncellenirken hata oluştu." };

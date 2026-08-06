@@ -22,8 +22,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/home",       label: "Ana Sayfa",     icon: <Home size={38} strokeWidth={2} /> },
-  { href: "/medicine",   label: "İlaçlar",        icon: <Pill size={38} strokeWidth={2} /> },
-  { href: "/memories",   label: "Özel Günler",    icon: <Camera size={38} strokeWidth={2} /> },
+  { href: "/medicine",  label: "İlaçlar",       icon: <Pill size={38} strokeWidth={2} /> },
+  { href: "/meetings",   label: "Buluşmalar",    icon: <CalendarDays size={38} strokeWidth={2} /> },
+  { href: "/memories",   label: "Özel Günler",   icon: <Camera size={38} strokeWidth={2} /> },
   { href: "/calendar",   label: "Takvim",         icon: <Calendar size={38} strokeWidth={2} /> },
   { href: "/daily-notes-user", label: "Günlük",   icon: <BookText size={38} strokeWidth={2} /> },
   { href: "/letters",    label: "Mektuplar",      icon: <Mail size={38} strokeWidth={2} /> },
@@ -35,9 +36,7 @@ const navItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Admin Ana Sayfa", icon: <LayoutDashboard size={38} strokeWidth={2} /> },
-  { href: "/admin/meetings", label: "Buluşmalar", icon: <CalendarDays size={38} strokeWidth={2} /> },
   { href: "/admin/moods", label: "Ruh Hali", icon: <LineChart size={38} strokeWidth={2} /> },
-  { href: "/admin/medicines", label: "İlaç Yönetimi", icon: <Pill size={38} strokeWidth={2} /> },
   { href: "/admin/logs", label: "Giriş Geçmişi", icon: <Users size={38} strokeWidth={2} /> },
   { href: "/admin/memories", label: "Özel Günler Y.", icon: <Camera size={38} strokeWidth={2} /> },
   { href: "/admin/calendar-events", label: "Kullanıcı Takvimi", icon: <CalendarDays size={38} strokeWidth={2} /> },

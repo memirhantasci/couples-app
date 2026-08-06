@@ -23,13 +23,14 @@ export async function createLetterAction(
 
   const supabase = createServerClient();
 
-  const { error } = await supabase.from("letters").insert({
-    sender_id: session.userId,
-    receiver_id: parseInt(receiver_id),
-    title,
-    content: encrypt(content),
-    unlock_date,
-    couple_id: session.coupleId,
+  // Use RPC to bypass PostgREST GENERATED ALWAYS AS IDENTITY issue
+  const { error } = await supabase.rpc("save_letter", {
+    p_sender_id:   session.userId,
+    p_receiver_id: parseInt(receiver_id),
+    p_title:       title,
+    p_content:     encrypt(content),
+    p_unlock_date: unlock_date,
+    p_couple_id:   session.coupleId,
   });
 
   if (error) {

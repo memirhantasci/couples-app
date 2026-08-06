@@ -25,20 +25,18 @@ export async function upsertDailyNoteAction(
 
   const supabase = createServerClient();
   const today = todayString();
+  const encryptedContent = encrypt(parsed.data.content);
 
-  const { error } = await supabase.from("daily_notes").upsert(
-    {
-      user_id: session.userId,
-      date: today,
-      content: encrypt(parsed.data.content),
-      couple_id: session.coupleId,
-    },
-    {
-      onConflict: "user_id,date",
-    }
-  );
+  // Use RPC to bypass PostgREST GENERATED ALWAYS AS IDENTITY issue
+  const { error } = await supabase.rpc("save_daily_note", {
+    p_user_id:   session.userId,
+    p_date:      today,
+    p_content:   encryptedContent,
+    p_couple_id: session.coupleId ?? null,
+  });
 
   if (error) {
+    console.error("daily_notes rpc error:", error);
     return { error: "Not kaydedilirken hata oluştu." };
   }
 
@@ -59,6 +57,25 @@ export async function deleteDailyNoteAction(id: number) {
   }
 
   revalidatePath("/admin/daily-notes");
+  return { success: true };
+}
+
+export async function deleteMyDailyNoteAction(id: number) {
+  const session = await getSession();
+  if (!session) return { error: "Oturum bulunamadı." };
+
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("daily_notes")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", session.userId);
+
+  if (error) {
+    return { error: "Not silinirken hata oluştu." };
+  }
+
+  revalidatePath("/daily-notes-user");
   return { success: true };
 }
 
@@ -83,6 +100,30 @@ export async function editDailyNoteAdminAction(id: number, content: string) {
   }
 
   revalidatePath("/admin/daily-notes");
+  return { success: true };
+}
+
+export async function editMyDailyNoteAction(id: number, content: string) {
+  const session = await getSession();
+  if (!session) return { error: "Oturum bulunamadı." };
+
+  const parsed = z.string().min(1, "Not boş olamaz").max(2000, "En fazla 2000 karakter").safeParse(content);
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0].message };
+  }
+
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("daily_notes")
+    .update({ content: encrypt(parsed.data) })
+    .eq("id", id)
+    .eq("user_id", session.userId);
+
+  if (error) {
+    return { error: "Not güncellenirken hata oluştu." };
+  }
+
+  revalidatePath("/daily-notes-user");
   return { success: true };
 }
 

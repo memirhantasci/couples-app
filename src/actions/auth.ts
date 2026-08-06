@@ -19,6 +19,7 @@ const registerSchema = z.object({
   username: z.string().min(1, "Kullanıcı adı gerekli"),
   email: z.string().email("Geçerli bir e-posta adresi giriniz"),
   password: z.string().min(1, "Şifre gerekli"),
+  gender: z.enum(["male", "female"], { required_error: "Lütfen cinsiyet seçiniz" }),
   pairingCode: z.string().optional(),
 });
 
@@ -263,6 +264,15 @@ export async function loginAction(
           loginDate: today,
           loginLogId: loginLog?.id ?? 0,
         });
+
+        // Eğer hesap silme planlanmışsa, giriş yapıldığında iptal et
+        if (user.couple_id) {
+          await supabase
+            .from("couples")
+            .update({ deletion_scheduled_at: null })
+            .eq("id", user.couple_id)
+            .not("deletion_scheduled_at", "is", null);
+        }
         
         nextUrl = isPaired ? "/home" : "/pairing";
       }
@@ -512,6 +522,7 @@ export async function registerAction(
     username: formData.get("username"),
     email: formData.get("email"),
     password: formData.get("password"),
+    gender: formData.get("gender"),
     pairingCode: formData.get("pairingCode"),
   });
 
@@ -591,6 +602,7 @@ export async function registerAction(
       email: deterministicEncrypt(email),
       password: hashedPassword,
       role: "USER",
+      gender: parsed.data.gender,
       couple_id: coupleIdToAssign
     })
     .select("id")

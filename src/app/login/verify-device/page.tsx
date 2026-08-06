@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { verifyDeviceAction } from "@/actions/auth";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
@@ -9,12 +9,14 @@ const initialState = {};
 
 export default function VerifyDevicePage() {
   const [state, formAction, isPending] = useActionState(verifyDeviceAction, initialState);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const otp = params.get('devOtp');
       if (otp) {
+        setDevOtp(otp);
         console.log("%c--- GELEN DOĞRULAMA KODU ---", "color: #E8002D; font-weight: bold; font-size: 16px;");
         console.log(`%cKOD: ${otp}`, "color: #F5C842; font-weight: bold; font-size: 24px;");
       }
@@ -74,8 +76,23 @@ export default function VerifyDevicePage() {
             Yeni Cihaz Tespit Edildi
           </h1>
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
-            Hesabınızın güvenliği için kayıtlı e-posta adresinize gönderdiğimiz 6 haneli doğrulama kodunu giriniz.
+            {devOtp
+              ? "E-posta servisi henüz aktif değil. Doğrulama kodunuz aşağıda gösterilmiştir:"
+              : "Hesabınızın güvenliği için kayıtlı e-posta adresinize gönderdiğimiz 6 haneli doğrulama kodunu giriniz."}
           </p>
+          {devOtp && (
+            <div style={{
+              marginTop: 16,
+              padding: "16px 24px",
+              background: "rgba(232,0,45,0.15)",
+              border: "2px dashed rgba(232,0,45,0.5)",
+              borderRadius: 16,
+              textAlign: "center",
+            }}>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, marginBottom: 4 }}>DOĞRULAMA KODUNUZ</p>
+              <p style={{ color: "#F5C842", fontSize: 32, fontWeight: "bold", letterSpacing: "0.3em" }}>{devOtp}</p>
+            </div>
+          )}
         </div>
 
         <form action={formAction} className="flex flex-col gap-6">

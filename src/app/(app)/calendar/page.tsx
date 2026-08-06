@@ -8,7 +8,7 @@ import { decrypt, deterministicDecrypt } from "@/utils/crypto";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Takvim — Emirhan & Öykü 💕",
+  title: "Takvim — Couples App 💕",
 };
 
 export const dynamic = "force-dynamic";

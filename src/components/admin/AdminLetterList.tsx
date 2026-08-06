@@ -33,8 +33,8 @@ export function AdminLetterList({ letters }: { letters: Letter[] }) {
   return (
     <div className="flex flex-col gap-6">
       {letters.map(letter => {
-        const senderName = letter.sender?.username === "emirhan" ? "Emirhan" : letter.sender?.username === "oyku" ? "Öykü" : letter.sender?.username || "Gizli Biri";
-        const receiverName = letter.receiver?.username === "emirhan" ? "Emirhan" : letter.receiver?.username === "oyku" ? "Öykü" : letter.receiver?.username || "Bilinmiyor";
+        const senderName = letter.sender?.display_name || letter.sender?.username || "Gizli Biri";
+        const receiverName = letter.receiver?.display_name || letter.receiver?.username || "Bilinmiyor";
         
         return (
           <div 

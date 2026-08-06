@@ -479,3 +479,9 @@ BEGIN
   RETURN QUERY SELECT v_target_couple.id, (v_target_couple.member_count + 1) >= 2;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- Added user_id to meetings
+-- ============================================================
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_meetings_user_id ON meetings(user_id);

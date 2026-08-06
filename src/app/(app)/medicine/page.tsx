@@ -8,7 +8,7 @@ import { dayjs, todayString } from "@/lib/date";
 import "dayjs/locale/tr";
 
 export const metadata: Metadata = {
-  title: "İlaç Takibi — Emirhan & Öykü 💕",
+  title: "İlaç Takibi — Couples App 💕",
 };
 
 export const dynamic = "force-dynamic";
@@ -68,21 +68,18 @@ export default async function MedicinePage() {
       .select("id, name, time, times, start_date, end_date, is_active, user_id")
       .eq("couple_id", session.coupleId as number)
       .eq("is_active", true)
-      .eq("user_id", session.userId)
       .lte("start_date", today)
       .gte("end_date", today)
       .order("time"),
     supabase
       .from("medicine_logs")
-      .select("medicine_id, status, date, time")
+      .select("medicine_id, status, date, time, user_id")
       .eq("couple_id", session.coupleId as number)
-      .eq("user_id", session.userId)
       .eq("date", today),
     supabase
       .from("medicine_logs")
-      .select("medicine_id, status, date, time")
+      .select("medicine_id, status, date, time, user_id")
       .eq("couple_id", session.coupleId as number)
-      .eq("user_id", session.userId)
       .gte("date", fourteenDaysAgo)
       .lt("date", today)
       .order("date", { ascending: false }),
@@ -100,9 +97,7 @@ export default async function MedicinePage() {
     <div
       className="flex flex-col max-w-lg mx-auto pb-24 min-h-[100dvh]"
       style={{
-        backgroundColor: "#0c0c0c",
-        backgroundImage: "radial-gradient(circle at 50% 0%, rgba(232, 0, 45, 0.05) 0%, transparent 50%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
-        backgroundSize: "100% 100%, 20px 20px, 20px 20px"
+        backgroundColor: "#000000",
       }}
     >
       {/* ── PAGE HEADER ─────────────────────────────────── */}
@@ -110,7 +105,7 @@ export default async function MedicinePage() {
         <h2 style={{
           fontSize: 24,
           fontWeight: 800,
-          color: "#E8002D",
+          color: "#ffffff",
           textAlign: "center",
           letterSpacing: "1px",
           marginBottom: 8,
@@ -122,7 +117,7 @@ export default async function MedicinePage() {
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
             {dateLabel}
           </p>
-          {streakValue >= 0 && (
+          {streakValue > 0 && (
             <div className="flex items-center gap-1.5">
               <Trophy size={14} style={{ color: "#d4a373" }} />
               <span className="font-medium text-sm" style={{ color: "#d4a373" }}>
@@ -133,7 +128,6 @@ export default async function MedicinePage() {
         </div>
       </div>
 
-      {/* ── STAT CIRCLES & CONTENT ─────────────────────────────────── */}
       <MedicineTracker
         medicines={medicines}
         todayLogs={todayLogs}

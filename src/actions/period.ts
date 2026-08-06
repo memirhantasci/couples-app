@@ -8,13 +8,18 @@ export async function togglePeriodLogAction(date: string) {
   const session = await getSession();
   if (!session) return { error: "Oturum bulunamadı." };
 
-  const nameLower = session.displayName?.toLowerCase() || "";
-  const isOyku = session.username === "oyku" || nameLower.includes("öykü") || nameLower.includes("oyku");
-  if (!isOyku) {
-    return { error: "Bu işlemi sadece Öykü yapabilir." };
-  }
-
   const supabase = createServerClient();
+
+  // Cinsiyeti DB'den çek — sadece kadın kullanıcılar regl takvimine veri girebilir
+  const { data: userData } = await supabase
+    .from("users")
+    .select("gender")
+    .eq("id", session.userId)
+    .single();
+
+  if (userData?.gender !== "female") {
+    return { error: "Bu işlemi sadece kadın kullanıcılar yapabilir." };
+  }
 
   // Check if log exists
   const { data: existing } = await supabase

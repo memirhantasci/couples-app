@@ -7,7 +7,7 @@ import Link from "next/link";
 import { dayjs } from "@/lib/date";
 
 export const metadata: Metadata = {
-  title: "Admin Paneli — Emirhan & Öykü 💕",
+  title: "Admin Paneli — Couples App 💕",
 };
 
 export const dynamic = "force-dynamic";
@@ -71,7 +71,7 @@ export default async function AdminDashboardPage() {
       title: "İlaç Yönetimi",
       description: `Aktif İlaç: ${activeMedsCount}`,
       icon: <Pill size={24} style={{ color: "#ffffff" }} />,
-      href: "/admin/medicines",
+      href: "/medicine",
       gradient: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
       borderColor: "rgba(255,255,255,0.2)",
     },
@@ -134,7 +134,7 @@ export default async function AdminDashboardPage() {
           Admin Paneli
         </h1>
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, marginTop: 4 }}>
-          Yönetim araçlarına hoş geldin Emirhan 👑
+          Yönetim araçlarına hoş geldin {session.displayName} 👑
         </p>
       </div>
 

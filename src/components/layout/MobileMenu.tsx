@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Home, Pill, Camera, Calendar, LayoutDashboard, Mail, BookText, Images, Upload, CalendarDays, LineChart, Users, BookOpen, Activity, UserCog } from "lucide-react";
+import { Menu, X, Home, Pill, Camera, Calendar, LayoutDashboard, Mail, BookText, Images, Upload, CalendarDays, LineChart, Users, BookOpen, Activity, UserCog, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,16 @@ const userNavItems: NavItem[] = [
     href: "/medicine",
     label: "İlaçlar",
     icon: <Pill size={34} strokeWidth={2} />,
+  },
+  {
+    href: "/medicine",
+    label: "İlaç Ekle",
+    icon: <Pill size={34} strokeWidth={2} />,
+  },
+  {
+    href: "/meetings",
+    label: "Buluşmalar",
+    icon: <CalendarDays size={34} strokeWidth={2} />,
   },
   {
     href: "/memories",
@@ -61,6 +71,11 @@ const userNavItems: NavItem[] = [
     icon: <Upload size={34} strokeWidth={2} />,
   },
   {
+    href: "/profile",
+    label: "Ayarlar",
+    icon: <Settings size={34} strokeWidth={2} />,
+  },
+  {
     href: "/admin",
     label: "Admin Paneli",
     icon: <LayoutDashboard size={34} strokeWidth={2} />,
@@ -90,7 +105,7 @@ const adminNavItems: NavItem[] = [
     icon: <LineChart size={34} strokeWidth={2} />,
   },
   {
-    href: "/admin/medicines",
+    href: "/medicine",
     label: "İlaç Yönetimi",
     icon: <Pill size={34} strokeWidth={2} />,
   },

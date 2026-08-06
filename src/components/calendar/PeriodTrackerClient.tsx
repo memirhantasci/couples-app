@@ -17,10 +17,10 @@ interface PeriodLog {
 
 interface PeriodTrackerClientProps {
   logs: PeriodLog[];
-  isOyku: boolean;
+  isFemale: boolean;
 }
 
-export function PeriodTrackerClient({ logs, isOyku }: PeriodTrackerClientProps) {
+export function PeriodTrackerClient({ logs, isFemale }: PeriodTrackerClientProps) {
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -40,8 +40,8 @@ export function PeriodTrackerClient({ logs, isOyku }: PeriodTrackerClientProps) 
   const sortedLogs = [...logs].sort((a, b) => dayjs(b.date).unix() - dayjs(a.date).unix());
 
   function handleDateClick(info: { dateStr: string }) {
-    if (!isOyku) {
-      toast.error("Bu tabloyu sadece Öykü güncelleyebilir.");
+    if (!isFemale) {
+      toast.error("Bu tabloyu sadece kadınlar güncelleyebilir.");
       return;
     }
 

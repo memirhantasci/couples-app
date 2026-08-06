@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { updateMedicineLogAction } from "@/actions/medicine";
+import { updateMedicineLogAction, createMedicineAction, deleteMedicineAction, editMedicineAction } from "@/actions/medicine";
 import { toast } from "sonner";
-import { Check, X } from "lucide-react";
+import { Check, X, Save, Trash2, Settings, User, Users, Edit2, Pill } from "lucide-react";
+import { dayjs, todayString } from "@/lib/date";
 
 interface Medicine {
   id: number;
   name: string;
   time: string;
   times?: string[];
+  start_date: string;
+  end_date: string;
+  user_id: number;
 }
 
 interface MedicineLog {
@@ -18,6 +23,7 @@ interface MedicineLog {
   status: "DRANK" | "MISSED" | "PENDING";
   date: string;
   time?: string;
+  user_id: number;
 }
 
 interface MedicineTrackerProps {
@@ -28,17 +34,21 @@ interface MedicineTrackerProps {
 }
 
 export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }: MedicineTrackerProps) {
+  const [activeTab, setActiveTab] = useState<"me" | "partner">("me");
+  
+  const filteredMedicines = medicines.filter(m => activeTab === "me" ? m.user_id === userId : m.user_id !== userId);
+  const filteredTodayLogs = todayLogs.filter(l => activeTab === "me" ? l.user_id === userId : l.user_id !== userId);
+  const filteredHistoricalLogs = historicalLogs.filter(l => activeTab === "me" ? l.user_id === userId : l.user_id !== userId);
+
   const [logs, setLogs] = useState<Record<string, "DRANK" | "MISSED" | "PENDING">>(
     () => {
       const map: Record<string, "DRANK" | "MISSED" | "PENDING"> = {};
-
       todayLogs.forEach((log) => {
         const timeKey = log.time ? log.time.substring(0, 5) : "";
         if (timeKey) {
           map[`${log.medicine_id}_${timeKey}`] = log.status;
         }
       });
-
       medicines.forEach((m) => {
         const medTimes = Array.isArray(m.times) && m.times.length > 0
           ? m.times.map((t) => t.substring(0, 5))
@@ -52,14 +62,26 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
           }
         });
       });
-
       return map;
     }
   );
 
   const [loadingSlot, setLoadingSlot] = useState<string | null>(null);
+  const [showManagerModal, setShowManagerModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [isPartnerAdd, setIsPartnerAdd] = useState(false);
+  
+  // Form State
+  const [editingMedicineId, setEditingMedicineId] = useState<number | null>(null);
+  const [medName, setMedName] = useState("");
+  const [medStartDate, setMedStartDate] = useState(todayString());
+  const [medEndDate, setMedEndDate] = useState(todayString());
+  const [medFrequency, setMedFrequency] = useState<1 | 2 | 3>(1);
+  const [medTimes, setMedTimes] = useState<string[]>(["08:00"]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleMarkDrank(medicineId: number, slotTime: string) {
+    if (activeTab === "partner") return;
     const key = `${medicineId}_${slotTime}`;
     const current = logs[key] || "PENDING";
     if (current === "DRANK") {
@@ -79,6 +101,7 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
   }
 
   async function handleMarkMissed(medicineId: number, slotTime: string) {
+    if (activeTab === "partner") return;
     const key = `${medicineId}_${slotTime}`;
     const current = logs[key] || "PENDING";
     if (current === "DRANK") {
@@ -97,20 +120,42 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
     }
   }
 
-  const scheduledSlots: { medId: number; time: string }[] = [];
-  medicines.forEach((m) => {
-    const medTimes = Array.isArray(m.times) && m.times.length > 0
-      ? m.times.map((t) => t.substring(0, 5))
-      : [m.time ? m.time.substring(0, 5) : "08:00"];
-    medTimes.forEach((t) => {
-      scheduledSlots.push({ medId: m.id, time: t });
-    });
-  });
+  async function handleDeleteMedicine(id: number) {
+    if (!confirm("Bu ilacı silmek istediğinize emin misiniz?")) return;
+    setIsDeleting(id);
+    const res = await deleteMedicineAction(id);
+    setIsDeleting(null);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("İlaç silindi.");
+    }
+  }
 
-  const totalDoses = scheduledSlots.length;
-  const drankCount = scheduledSlots.filter((s) => logs[`${s.medId}_${s.time}`] === "DRANK").length;
-  const missedCount = scheduledSlots.filter((s) => logs[`${s.medId}_${s.time}`] === "MISSED").length;
-  const pendingCount = scheduledSlots.filter((s) => (logs[`${s.medId}_${s.time}`] || "PENDING") === "PENDING").length;
+  const handleEditMedicine = (med: Medicine) => {
+    setEditingMedicineId(med.id);
+    setMedName(med.name);
+    setMedStartDate(med.start_date);
+    setMedEndDate(med.end_date);
+    setIsPartnerAdd(med.user_id !== userId);
+    
+    if (med.times && Array.isArray(med.times) && med.times.length > 0) {
+      setMedFrequency(Math.min(3, med.times.length) as 1 | 2 | 3);
+      setMedTimes(med.times.slice(0, 3).map(t => t.substring(0, 5)));
+    } else if (med.time) {
+      setMedFrequency(1);
+      setMedTimes([med.time.substring(0, 5)]);
+    }
+  };
+
+  const resetForm = () => {
+    setEditingMedicineId(null);
+    setMedName("");
+    setMedStartDate(todayString());
+    setMedEndDate(todayString());
+    setMedFrequency(1);
+    setMedTimes(["08:00"]);
+  };
 
   const formatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Istanbul",
@@ -119,111 +164,381 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
   });
   const currentTimeStr = formatter.format(new Date());
 
-  return (
-    <div className="flex flex-col gap-0">
+  const handleSubmitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!medName) {
+      toast.error("İlaç adı boş olamaz.");
+      return;
+    }
 
-      {/* ── CIRCULAR STAT BADGES ──────────────────────── */}
+    const todayStrFormat = todayString();
+    if (dayjs(medStartDate).isBefore(dayjs(todayStrFormat))) {
+      toast.error("Geçmiş bir tarihe ilaç ekleyemezsiniz!");
+      return;
+    }
+    
+    if (medStartDate === todayStrFormat) {
+      const now = new Date();
+      const allPast = medTimes.every(t => {
+        const [hours, minutes] = t.split(":").map(Number);
+        const timeDate = new Date();
+        timeDate.setHours(hours, minutes, 0, 0);
+        return timeDate < now;
+      });
+      if (allPast && !editingMedicineId) {
+        toast.error("Seçtiğiniz saatler geçmişte. Lütfen ileri bir saat seçin veya tarihi yarına alın.");
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    formData.append("name", medName);
+    formData.append("start_date", medStartDate);
+    formData.append("end_date", medEndDate);
+    formData.append("is_partner", isPartnerAdd ? "true" : "false");
+    medTimes.forEach(t => formData.append("times", t));
+    
+    formData.append("time", medTimes[0]);
+
+    if (editingMedicineId) {
+       const originalMed = medicines.find(m => m.id === editingMedicineId);
+       
+       const result = await editMedicineAction(editingMedicineId, {
+         name: medName,
+         start_date: medStartDate,
+         end_date: medEndDate,
+         times: medTimes,
+         user_id: isPartnerAdd ? (originalMed?.user_id !== userId ? originalMed!.user_id : -1) : userId 
+       });
+       
+       if (result.success) {
+         toast.success("İlaç başarıyla güncellendi! 💊");
+         resetForm();
+       } else {
+         toast.error(result.error);
+       }
+    } else {
+      const result = await createMedicineAction({}, formData);
+      if (result.success) {
+        toast.success("İlaç başarıyla eklendi! 💊");
+        resetForm();
+      } else {
+        toast.error(result.error);
+      }
+    }
+    
+    setIsSubmitting(false);
+  };
+
+  const managerModal = showManagerModal ? (
+    <div
+      style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.85)", zIndex: 9999,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 20, backdropFilter: "blur(5px)"
+      }}
+    >
       <div
-        className="mx-4 mb-6 py-8 px-5 flex justify-between"
         style={{
-          background: "linear-gradient(135deg, #181a20 0%, #151012 100%)",
-          border: "1px solid rgba(255,255,255,0.05)",
-          borderRadius: "24px",
+          width: "100%", maxWidth: 450, maxHeight: "90vh",
+          background: "#1c1c1e", borderRadius: 24, padding: 24,
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 20px 48px rgba(0,0,0,0.5)",
+          position: "relative", display: "flex", flexDirection: "column",
+          overflowY: "auto"
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Toplam Doz */}
-        <div className="flex justify-center flex-1">
-          <div
-            className="flex flex-col items-center justify-center relative"
-            style={{
-              width: 116,
-              height: 116,
-              borderRadius: "50%",
-              border: "3px solid #E8002D",
-              boxShadow: "0 0 20px rgba(232, 0, 45, 0.6), inset 0 0 12px rgba(232, 0, 45, 0.4)",
-              background: "transparent",
-            }}
-          >
-            <span className="font-medium text-[34px]" style={{ color: "#E8002D", lineHeight: 1.1, marginTop: "4px" }}>
-              {totalDoses}
-            </span>
-            <span className="text-[12px] font-normal mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>
-              Toplam Doz
-            </span>
+        <button
+          onClick={() => setShowManagerModal(false)}
+          style={{
+            position: "absolute", top: 20, right: 20,
+            background: "transparent", border: "none",
+            color: "rgba(255,255,255,0.5)", cursor: "pointer", padding: 4,
+          }}
+        >
+          <X size={20} />
+        </button>
+
+        <h3 style={{
+          color: "white", fontSize: 18, fontWeight: 700,
+          marginBottom: 16, display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <Settings size={20} style={{ color: "#E8002D" }} />
+          İlaç Yönetimi
+        </h3>
+
+        {/* Mevcut İlaçlar */}
+        <div style={{ marginBottom: 24 }}>
+          <h4 style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 8, fontWeight: 600 }}>Mevcut İlaçlar</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {medicines.length === 0 && <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>Kayıtlı ilaç yok.</p>}
+            {medicines.map(m => (
+              <div key={m.id} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.05)"
+              }}>
+                <div>
+                  <p style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{m.name}</p>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+                    {m.user_id === userId ? "Benim İlacım" : "Sevgilimin İlacı"}
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => handleEditMedicine(m)}
+                    style={{
+                      background: "rgba(255,255,255,0.1)", border: "none",
+                      color: "white", padding: 8, borderRadius: 8, cursor: "pointer"
+                    }}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMedicine(m.id)}
+                    disabled={isDeleting === m.id}
+                    style={{
+                      background: "rgba(239,68,68,0.15)", border: "none",
+                      color: "#ef4444", padding: 8, borderRadius: 8, cursor: "pointer"
+                    }}
+                  >
+                    {isDeleting === m.id ? <div className="w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={16} />}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Alındı */}
-        <div className="flex justify-center flex-1">
-          <div
-            className="flex flex-col items-center justify-center relative"
-            style={{
-              width: 116,
-              height: 116,
-              borderRadius: "50%",
-              border: "3px solid #22C55E",
-              boxShadow: "0 0 20px rgba(34, 197, 94, 0.6), inset 0 0 12px rgba(34, 197, 94, 0.4)",
-              background: "transparent",
-            }}
-          >
-            <span className="font-medium text-[34px]" style={{ color: "#22C55E", lineHeight: 1.1, marginTop: "4px" }}>
-              {drankCount}
-            </span>
-            <span className="text-[12px] font-normal mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>
-              Alındı
-            </span>
-          </div>
+        {/* Yeni İlaç Ekle */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 20 }}>
+          <h4 style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 12, fontWeight: 600 }}>
+            {editingMedicineId ? "İlacı Düzenle" : "Yeni İlaç Ekle"}
+          </h4>
+          <form onSubmit={handleSubmitForm} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <button 
+                type="button"
+                onClick={() => setIsPartnerAdd(false)}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: !isPartnerAdd ? "rgba(232,0,45,0.1)" : "rgba(255,255,255,0.05)",
+                  border: !isPartnerAdd ? "1px solid #E8002D" : "1px solid rgba(255,255,255,0.1)",
+                  color: !isPartnerAdd ? "#E8002D" : "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 14, cursor: "pointer"
+                }}
+              >
+                <User size={16} /> Ben
+              </button>
+              <button 
+                type="button"
+                onClick={() => setIsPartnerAdd(true)}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: isPartnerAdd ? "rgba(232,0,45,0.1)" : "rgba(255,255,255,0.05)",
+                  border: isPartnerAdd ? "1px solid #E8002D" : "1px solid rgba(255,255,255,0.1)",
+                  color: isPartnerAdd ? "#E8002D" : "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 14, cursor: "pointer"
+                }}
+              >
+                <Users size={16} /> Sevgilim
+              </button>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>İlaç Adı</label>
+              <input 
+                name="name"
+                value={medName}
+                onChange={e => setMedName(e.target.value)}
+                required
+                placeholder="Örn: Parol"
+                style={{
+                  width: "100%", padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)", color: "white", fontSize: 14, outline: "none"
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Başlangıç</label>
+                <input 
+                  name="start_date" 
+                  type="date"
+                  required
+                  value={medStartDate}
+                  onChange={e => setMedStartDate(e.target.value)}
+                  style={{
+                    width: "100%", padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)", color: "white", fontSize: 14, outline: "none",
+                    colorScheme: "dark"
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Bitiş</label>
+                <input 
+                  name="end_date" 
+                  type="date"
+                  required
+                  value={medEndDate}
+                  onChange={e => setMedEndDate(e.target.value)}
+                  style={{
+                    width: "100%", padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)", color: "white", fontSize: 14, outline: "none",
+                    colorScheme: "dark"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Günde Kaç Kez?</label>
+              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                {[1, 2, 3].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      setMedFrequency(num as 1 | 2 | 3);
+                      const newTimes = [...medTimes];
+                      if (newTimes.length < num) {
+                        while (newTimes.length < num) newTimes.push("08:00");
+                      } else if (newTimes.length > num) {
+                        newTimes.splice(num);
+                      }
+                      setMedTimes(newTimes);
+                    }}
+                    style={{
+                      flex: 1, padding: 12, borderRadius: 12, cursor: "pointer",
+                      background: medFrequency === num ? "rgba(232,0,45,0.1)" : "rgba(255,255,255,0.05)",
+                      border: medFrequency === num ? "1px solid #E8002D" : "1px solid rgba(255,255,255,0.1)",
+                      color: medFrequency === num ? "#E8002D" : "rgba(255,255,255,0.5)",
+                      fontWeight: 600, fontSize: 14
+                    }}
+                  >
+                    {num} Kez
+                  </button>
+                ))}
+              </div>
+
+              <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Alım Saatleri</label>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {medTimes.map((t, index) => (
+                  <input
+                    key={index}
+                    type="time"
+                    required
+                    value={t}
+                    onChange={(e) => {
+                      const newTimes = [...medTimes];
+                      newTimes[index] = e.target.value;
+                      setMedTimes(newTimes);
+                    }}
+                    style={{
+                      flex: 1, minWidth: "30%", padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)", color: "white", fontSize: 14, outline: "none",
+                      textAlign: "center",
+                      colorScheme: "dark"
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                width: "100%", padding: 14, borderRadius: 12, background: "transparent", color: "white",
+                border: "none", fontWeight: 700, fontSize: 15, marginTop: 4, cursor: isSubmitting ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: isSubmitting ? 0.7 : 1,
+                // Because mobile ui has no red background on "İlacı Kaydet" but wait, actually in screenshot 1 there is NO "İlacı Kaydet" button visible without scroll. But the mobile code has `#E8002D` background. Wait, mobile code for save is `#E8002D`. 
+                // Wait, looking at the code for mobile, save btn has backgroundColor: "#E8002D".
+                backgroundColor: "#E8002D"
+              }}
+            >
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+              ) : (
+                <><Save size={18} /> {editingMedicineId ? "Güncelle" : "İlacı Kaydet"}</>
+              )}
+            </button>
+            {editingMedicineId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                style={{
+                  width: "100%", padding: 14, borderRadius: 12, background: "transparent", color: "rgba(255,255,255,0.5)",
+                  border: "none", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+                }}
+              >
+                İptal
+              </button>
+            )}
+          </form>
         </div>
 
-        {/* Bekliyor */}
-        <div className="flex justify-center flex-1">
-          <div
-            className="flex flex-col items-center justify-center relative"
-            style={{
-              width: 116,
-              height: 116,
-              borderRadius: "50%",
-              border: "3px solid #D8A030",
-              boxShadow: "0 0 20px rgba(216, 160, 48, 0.6), inset 0 0 12px rgba(216, 160, 48, 0.4)",
-              background: "transparent",
-            }}
-          >
-            <span className="font-medium text-[34px]" style={{ color: "rgba(255,255,255,0.9)", lineHeight: 1.1, marginTop: "4px" }}>
-              {pendingCount}
-            </span>
-            <span className="text-[12px] font-normal mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>
-              Bekliyor
-            </span>
-          </div>
-        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className="flex flex-col gap-0 relative w-full h-full">
+      {typeof document !== 'undefined' && createPortal(managerModal, document.body)}
+
+      {/* ── TABS ──────────────────── */}
+      <div className="flex mx-4 mb-6 rounded-[12px] p-1" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+        <button 
+          onClick={() => setActiveTab("me")}
+          className="flex-1 py-3 text-sm font-bold rounded-[8px] transition-all"
+          style={{
+            background: activeTab === "me" ? "white" : "transparent",
+            color: activeTab === "me" ? "black" : "rgba(255,255,255,0.5)"
+          }}
+        >
+          Ben
+        </button>
+        <button 
+          onClick={() => setActiveTab("partner")}
+          className="flex-1 py-3 text-sm font-bold rounded-[8px] transition-all"
+          style={{
+            background: activeTab === "partner" ? "white" : "transparent",
+            color: activeTab === "partner" ? "black" : "rgba(255,255,255,0.5)"
+          }}
+        >
+          Sevgilim
+        </button>
       </div>
 
-      {/* ── BUGÜNÜN İLAÇLARI HEADER ──────────────────── */}
-      <div className="mb-3 px-4">
+      <div className="mb-3 px-4 flex items-center justify-between">
         <h2 className="font-normal text-[15px] flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.8)" }}>
-          <span style={{ fontSize: 16 }}>🏷️</span>
-          Bugünün İlaçları
+          Bugünün İlaçları {activeTab === "partner" ? "(Sevgilimin)" : ""}
         </h2>
       </div>
 
       {/* ── MEDICINE CARDS ───────────────────────────── */}
       <div className="flex flex-col gap-4 px-4">
-        {medicines.length === 0 ? (
+        {filteredMedicines.length === 0 ? (
           <div
-            className="flex flex-col items-center gap-4 py-16"
+            className="flex flex-col items-center gap-4 py-12"
             style={{
               background: "#181a20",
-              border: "1px dashed rgba(255,255,255,0.15)",
+              border: "1px dashed rgba(255,255,255,0.1)",
               borderRadius: "16px",
             }}
           >
             <span className="text-4xl">💊</span>
-            <p className="text-[15px]" style={{ color: "rgba(255,255,255,0.5)" }}>
-              Bugün için aktif ilaç yok
+            <p className="text-[14px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              {activeTab === "partner" ? "Sevgilinin aktif ilacı yok" : "Bugün için aktif ilaç yok"}
             </p>
           </div>
         ) : (
-          medicines.map((medicine) => {
+          filteredMedicines.map((medicine) => {
             const medTimes = Array.isArray(medicine.times) && medicine.times.length > 0
               ? medicine.times.map((t) => t.substring(0, 5))
               : [medicine.time ? medicine.time.substring(0, 5) : "08:00"];
@@ -239,20 +554,16 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
                   borderRadius: "16px",
                 }}
               >
-                <div className="flex flex-col items-center justify-evenly py-3.5 px-4 min-h-[130px] text-center w-full gap-2.5">
-                  {/* Title */}
-                  <p className="font-bold text-[17px] tracking-tight leading-tight text-white text-center">
+                <div className="flex flex-col items-center justify-evenly py-4 px-4 text-center w-full gap-2">
+                  <p className="font-bold text-[18px] tracking-tight leading-tight text-white text-center">
                     {medicine.name}
                   </p>
-
-                  {/* Subtitle */}
-                  <p className="text-[11px] text-center text-neutral-400">
+                  <p className="text-[12px] text-center text-neutral-400 mb-2">
                     Günde {medTimes.length} kez ({medTimes.join(", ")})
                   </p>
 
-                  {/* Dose Slots / Button */}
-                  <div className="flex flex-col gap-2 w-full items-center justify-center">
-                    {medTimes.map((slotTime, idx) => {
+                  <div className="flex flex-col gap-2 w-full items-center justify-center mt-1">
+                    {medTimes.map((slotTime) => {
                       const key = `${medicine.id}_${slotTime}`;
                       const status = logs[key] || "PENDING";
                       const isDrank = status === "DRANK";
@@ -261,63 +572,51 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
                       const isTimePassed = currentTimeStr >= slotTime;
 
                       return (
-                        <div
-                          key={slotTime}
-                          className="flex items-center justify-center w-full"
-                        >
+                        <div key={slotTime} className="flex items-center justify-center w-full">
                           {isLoading ? (
-                            <div className="py-2 px-3.5 flex items-center justify-center rounded-lg bg-white/5">
-                              <div
-                                className="w-4 h-4 border-2 rounded-full animate-spin"
-                                style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#fff" }}
-                              />
+                            <div className="py-3 px-3.5 flex items-center justify-center rounded-xl bg-white/5 w-full max-w-[220px]">
+                              <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#fff" }} />
                             </div>
                           ) : isDrank ? (
-                            <div className="flex items-center justify-center w-full">
-                              {/* Solid green DOZ ALINDI button */}
-                              <div
-                                className="py-2.5 px-5 rounded-xl flex items-center justify-center shadow-[0_0_12px_rgba(34,197,94,0.35)]"
-                                style={{ background: "#22C55E", color: "#ffffff" }}
-                              >
-                                <span className="font-bold text-[15px] tracking-wide flex items-center gap-1.5 justify-center text-center">
-                                  ✓ DOZ ALINDI 🔒
-                                </span>
-                              </div>
+                            <div className="py-3 px-5 w-full max-w-[220px] rounded-xl flex items-center justify-center shadow-[0_0_12px_rgba(34,197,94,0.2)]" style={{ background: "rgba(34,197,94,0.15)", border: "1px solid #22C55E", color: "#22C55E" }}>
+                              <span className="font-bold text-[14px] flex items-center gap-1.5 justify-center text-center">
+                                <Check size={18} /> Alındı ({slotTime})
+                              </span>
                             </div>
                           ) : isMissed ? (
-                            <div className="flex items-center justify-center w-full">
-                              <div
-                                className="py-2.5 px-5 rounded-xl flex items-center justify-center shadow-[0_0_12px_rgba(216,66,87,0.35)]"
-                                style={{ background: "#D84257", color: "#ffffff" }}
-                              >
-                                <span className="font-bold text-[15px] tracking-wide justify-center text-center">
-                                  DOZ ATLANDI
-                                </span>
-                              </div>
+                            <div className="py-3 px-5 w-full max-w-[220px] rounded-xl flex items-center justify-center shadow-[0_0_12px_rgba(239,68,68,0.2)]" style={{ background: "rgba(239,68,68,0.15)", border: "1px solid #ef4444", color: "#ef4444" }}>
+                              <span className="font-bold text-[14px] flex items-center gap-1.5 justify-center text-center">
+                                <X size={18} /> Atlandı ({slotTime})
+                              </span>
                             </div>
                           ) : !isTimePassed ? (
-                            <div className="flex items-center justify-center w-full">
-                              <div className="py-2.5 px-5 rounded-xl flex items-center justify-center bg-white/5 text-white/50 text-[12px] font-medium text-center">
-                                {slotTime} 🔒
-                              </div>
+                            <div className="py-3 px-5 w-full max-w-[220px] rounded-xl flex items-center justify-center bg-white/5 text-white/50 text-[14px] font-bold text-center border border-white/10">
+                              Bekliyor ({slotTime})
                             </div>
                           ) : (
-                            <div className="flex items-center justify-center gap-2.5 w-full">
-                              <button
-                                onClick={() => handleMarkDrank(medicine.id, slotTime)}
-                                className="flex-1 max-w-[110px] py-2.5 px-4 rounded-xl font-bold text-[13px] transition-all active:scale-95 flex items-center justify-center text-center"
-                                style={{ background: "#22C55E", color: "#ffffff" }}
-                              >
-                                İçtim
-                              </button>
-                              <button
-                                onClick={() => handleMarkMissed(medicine.id, slotTime)}
-                                className="flex-1 max-w-[110px] py-2.5 px-4 rounded-xl font-bold text-[13px] transition-all active:scale-95 flex items-center justify-center text-center"
-                                style={{ background: "#D84257", color: "#ffffff" }}
-                              >
-                                Atla
-                              </button>
-                            </div>
+                            // Action buttons only available for 'me'
+                            activeTab === "me" ? (
+                              <div className="flex items-center justify-center gap-2.5 w-full">
+                                <button
+                                  onClick={() => handleMarkMissed(medicine.id, slotTime)}
+                                  className="flex-1 max-w-[105px] py-3 px-4 rounded-xl font-bold text-[14px] transition-all active:scale-95 flex items-center justify-center text-center"
+                                  style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+                                >
+                                  Atla
+                                </button>
+                                <button
+                                  onClick={() => handleMarkDrank(medicine.id, slotTime)}
+                                  className="flex-1 max-w-[105px] py-3 px-4 rounded-xl font-bold text-[14px] transition-all active:scale-95 flex items-center justify-center text-center"
+                                  style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}
+                                >
+                                  İçtim
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="py-3 px-5 w-full max-w-[220px] rounded-xl flex items-center justify-center bg-white/5 text-white/50 text-[14px] font-bold text-center border border-white/10">
+                                Bekliyor ({slotTime}) - İçilmedi
+                              </div>
+                            )
                           )}
                         </div>
                       );
@@ -328,71 +627,17 @@ export function MedicineTracker({ medicines, todayLogs, historicalLogs, userId }
             );
           })
         )}
+
+        <button 
+          onClick={() => setShowManagerModal(true)}
+          className="mt-2 flex items-center justify-center gap-2 py-4 rounded-[16px] text-[16px] font-bold tracking-wide transition-all active:scale-95"
+          style={{ background: "#1c1c1e", color: "white", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          <Settings size={20} />
+          İlaç Yönetimi
+        </button>
       </div>
 
-      {/* ── GEÇMIŞ KAYITLAR ──────────────────────────── */}
-      {(() => {
-        const historyByDate: Record<string, MedicineLog[]> = {};
-        historicalLogs.forEach((log) => {
-          if (!historyByDate[log.date]) historyByDate[log.date] = [];
-          historyByDate[log.date].push(log);
-        });
-        const historyDates = Object.keys(historyByDate).sort((a, b) => b.localeCompare(a)).slice(0, 9);
-        const getMedName = (id: number) => medicines.find((m) => m.id === id)?.name ?? "İlaç";
-
-        if (historyDates.length === 0) return null;
-
-        return (
-          <div className="mt-6 px-4">
-            <div className="flex items-center gap-1.5 mb-3">
-              <span style={{ fontSize: 16 }}>🕒</span>
-              <h2 className="font-normal text-[15px]" style={{ color: "rgba(255,255,255,0.8)" }}>
-                Geçmiş Kayıtlar
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-3 gap-[10px] p-0.5" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.1) transparent" }}>
-              {historyDates.map((date) => {
-                const dayLogs = historyByDate[date];
-                const drankLogsCount = dayLogs.filter((l) => l.status === "DRANK").length;
-                const dateObj = new Date(date + "T00:00:00");
-                const dayName = dateObj.toLocaleDateString("tr-TR", { weekday: "short" });
-                const dayNum = dateObj.getDate();
-                const monthName = dateObj.toLocaleDateString("tr-TR", { month: "long" });
-                const dateLabel = `${dayNum} ${monthName} ${dayName}`;
-
-                return (
-                  <div
-                    key={date}
-                    className="p-2.5 rounded-[12px] flex flex-col gap-2 items-center text-center justify-between"
-                    style={{
-                      background: "#181a20",
-                      border: "1px solid rgba(232, 0, 45, 0.6)",
-                      minHeight: 100,
-                    }}
-                  >
-                    <p className="font-normal text-[11px]" style={{ color: "#ffffff" }}>
-                      {dateLabel}
-                    </p>
-                    <p className="text-[12px] font-normal" style={{ color: "#E8002D", lineHeight: 1.2 }}>
-                      {Array.from(new Set(dayLogs.map((l) => getMedName(l.medicine_id)))).join(", ")}
-                    </p>
-                    <div
-                      className="px-2.5 py-0.5 mt-auto rounded-full text-[10px] font-medium"
-                      style={{
-                        background: drankLogsCount === dayLogs.length ? "#22C55E" : "#E8002D",
-                        color: "#ffffff",
-                      }}
-                    >
-                      {drankLogsCount}/{dayLogs.length} Doz
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

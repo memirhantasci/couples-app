@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import dayjs from "dayjs";
 import "dayjs/locale/tr";
 import { decrypt } from "@/utils/crypto";
+import { DailyNoteUserCard } from "@/components/notes/DailyNoteUserCard";
 
 export const metadata: Metadata = {
-  title: "Günlüğüm — Emirhan & Öykü 💕",
+  title: "Günlüğüm — Couples App 💕",
 };
 
 export const dynamic = "force-dynamic";
@@ -147,26 +148,7 @@ export default async function DailyNotesUserPage() {
                 </div>
 
                 {/* ── Content card ── */}
-                <div
-                  className="flex-1 min-w-0"
-                  style={{
-                    background: "#1a1a1e",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: 14,
-                    padding: 16,
-                  }}
-                >
-                  <p
-                    className="whitespace-pre-wrap break-words"
-                    style={{
-                      fontSize: 13.5,
-                      color: "rgba(255,255,255,0.75)",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {note.content}
-                  </p>
-                </div>
+                <DailyNoteUserCard note={note} />
               </div>
             );
           })}

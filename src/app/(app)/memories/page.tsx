@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { MemoryTimeline } from "@/components/memories/MemoryTimeline";
 
 export const metadata: Metadata = {
-  title: "Özel Günlerimiz — Emirhan & Öykü 💕",
+  title: "Özel Günlerimiz — Couples App 💕",
 };
 
 export const dynamic = "force-dynamic";

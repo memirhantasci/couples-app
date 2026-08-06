@@ -37,20 +37,23 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function LoginLogsTable({ logs }: LoginLogsTableProps) {
-  const [filter, setFilter] = useState<"all" | "emirhan" | "oyku">("all");
+  const [filter, setFilter] = useState<string>("all");
+
+  // Dinamik kullanıcı listesi — sabit isimler yok
+  const uniqueUsers = Array.from(
+    new Map(
+      logs
+        .map((log) => {
+          const u = Array.isArray(log.users) ? log.users[0] : log.users;
+          return u ? [u.username, u.display_name || u.username] as [string, string] : null;
+        })
+        .filter(Boolean) as [string, string][]
+    ).entries()
+  );
 
   const filtered = logs.filter((log) => {
     if (filter === "all") return true;
     const u = Array.isArray(log.users) ? log.users[0] : log.users;
-    
-    if (filter === "oyku") {
-      return u?.display_name?.toLowerCase() === "öykü" || u?.username?.toLowerCase() === "oyku";
-    }
-    
-    if (filter === "emirhan") {
-      return u?.display_name?.toLowerCase() === "emirhan" || u?.username?.toLowerCase() === "emirhan";
-    }
-
     return u?.username?.toLowerCase() === filter;
   });
 
@@ -59,17 +62,30 @@ export function LoginLogsTable({ logs }: LoginLogsTableProps) {
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-white text-sm">Giriş Geçmişi</h3>
         <div className="flex gap-1">
-          {(["all", "emirhan", "oyku"] as const).map((f) => (
+          {/* Tümü Butonu */}
+          <button
+            key="all"
+            onClick={() => setFilter("all")}
+            className="px-3 py-1 rounded-lg text-xs font-semibold transition-all"
+            style={{
+              background: filter === "all" ? "var(--gs-red)" : "rgba(255,255,255,0.06)",
+              color: filter === "all" ? "#fff" : "rgba(255,255,255,0.4)",
+            }}
+          >
+            Tümü
+          </button>
+          {/* Dinamik Kullanıcı Filtreleri */}
+          {uniqueUsers.map(([username, displayName]) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={username}
+              onClick={() => setFilter(username)}
               className="px-3 py-1 rounded-lg text-xs font-semibold transition-all"
               style={{
-                background: filter === f ? "var(--gs-red)" : "rgba(255,255,255,0.06)",
-                color: filter === f ? "#fff" : "rgba(255,255,255,0.4)",
+                background: filter === username ? "var(--gs-red)" : "rgba(255,255,255,0.06)",
+                color: filter === username ? "#fff" : "rgba(255,255,255,0.4)",
               }}
             >
-              {f === "all" ? "Tümü" : f === "emirhan" ? "Emirhan" : "Öykü"}
+              {displayName}
             </button>
           ))}
         </div>

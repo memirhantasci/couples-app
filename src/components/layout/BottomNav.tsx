@@ -15,7 +15,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/home",     label: "Ana Sayfa", icon: Home },
   { href: "/medicine", label: "İlaçlar",   icon: Pill },
-  { href: "/calendar", label: "Takvim",    icon: Calendar },
+  { href: "/meetings",  label: "Buluşmalar",icon: Calendar },
   { href: "/letters",  label: "Mektuplar", icon: Mail },
 ];
 

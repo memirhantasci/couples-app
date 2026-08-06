@@ -12,7 +12,7 @@ import { DailyNoteCard } from "@/components/home/DailyNoteCard";
 import { PendingLettersCard } from "@/components/home/PendingLettersCard";
 
 export const metadata: Metadata = {
-  title: "Ana Sayfa — Emirhan & Öykü 💕",
+  title: "Ana Sayfa — Couples App 💕",
 };
 
 export const dynamic = "force-dynamic";
@@ -45,9 +45,9 @@ export default async function HomePage() {
       .select("id, meeting_datetime, title")
       .eq("couple_id", session.coupleId)
       .eq("is_active", true)
+      .gte("meeting_datetime", dayjs().subtract(3, "hour").toISOString())
       .order("meeting_datetime", { ascending: true })
-      .limit(1)
-      .single(),
+      .limit(5),
     supabase
       .from("letters")
       .select("id, unlock_date, sender:users!letters_sender_id_fkey(username, display_name)")
@@ -64,7 +64,14 @@ export default async function HomePage() {
   const quote = getQuoteForDay(doy);
   const currentMood = moodResult.data?.mood_type ?? null;
   const currentNote = noteResult.data?.content ? decrypt(noteResult.data.content) : null;
-  const activeMeeting = meetingResult.data;
+  let activeMeeting = null;
+  if (meetingResult.data && Array.isArray(meetingResult.data)) {
+    const now = dayjs();
+    const futureMeeting = meetingResult.data.find((m: any) => dayjs(m.meeting_datetime).isAfter(now));
+    activeMeeting = futureMeeting || meetingResult.data[meetingResult.data.length - 1] || null;
+  } else if (meetingResult.data) {
+    activeMeeting = meetingResult.data;
+  }
   const pendingLetters = ((pendingLettersResult.data as any[]) ?? []).map(l => ({
     ...l,
     sender: { ...l.sender, username: deterministicDecrypt(l.sender?.username) || l.sender?.username }

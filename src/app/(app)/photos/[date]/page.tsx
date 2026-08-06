@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { date } = await params;
   const d = new Date(date + "T00:00:00");
   const label = d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
-  return { title: `${label} Fotoğrafları — Emirhan & Öykü 💕` };
+  return { title: `${label} Fotoğrafları — Couples App 💕` };
 }
 
 export const dynamic = "force-dynamic";

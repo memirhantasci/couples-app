@@ -39,6 +39,7 @@ export async function createMeetingAction(
     title: parsed.data.title || "Buluşma",
     is_active: true,
     couple_id: session.coupleId,
+    user_id: session.userId,
   });
 
   if (error) {
@@ -46,6 +47,7 @@ export async function createMeetingAction(
   }
 
   revalidatePath("/home");
+  revalidatePath("/meetings");
   revalidatePath("/admin");
   return { success: true };
 }
@@ -57,6 +59,12 @@ export async function deactivateMeetingAction(id: number) {
   }
 
   const supabase = createServerClient();
+  
+  const { data: existing } = await supabase.from("meetings").select("user_id").eq("id", id).single();
+  if (existing?.user_id && existing.user_id !== session.userId) {
+    return { error: "Bu buluşmayı yalnızca oluşturan kişi silebilir." };
+  }
+
   const { error } = await supabase
     .from("meetings")
     .update({ is_active: false })
@@ -66,6 +74,7 @@ export async function deactivateMeetingAction(id: number) {
   if (error) return { error: "Güncelleme başarısız." };
 
   revalidatePath("/home");
+  revalidatePath("/meetings");
   revalidatePath("/admin");
   return { success: true };
 }
@@ -77,6 +86,12 @@ export async function updateMeetingAction(id: number, meeting_datetime: string) 
   }
 
   const supabase = createServerClient();
+  
+  const { data: existing } = await supabase.from("meetings").select("user_id").eq("id", id).single();
+  if (existing?.user_id && existing.user_id !== session.userId) {
+    return { error: "Bu buluşmayı yalnızca oluşturan kişi düzenleyebilir." };
+  }
+
   const utcDateTime = dayjs.tz(meeting_datetime, "Europe/Istanbul").toISOString();
 
   const { error } = await supabase
@@ -88,6 +103,7 @@ export async function updateMeetingAction(id: number, meeting_datetime: string) 
   if (error) return { error: "Güncelleme başarısız." };
 
   revalidatePath("/home");
+  revalidatePath("/meetings");
   revalidatePath("/admin");
   return { success: true };
 }

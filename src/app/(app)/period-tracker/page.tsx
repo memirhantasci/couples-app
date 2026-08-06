@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { PeriodTrackerClient } from "@/components/calendar/PeriodTrackerClient";
 
 export const metadata: Metadata = {
-  title: "Regl Takvimi — Emirhan & Öykü 💕",
+  title: "Regl Takvimi — Couples App 💕",
   description: "Regl takibi",
 };
 
@@ -25,16 +25,21 @@ export default async function PeriodTrackerPage() {
 
   if (error) console.error("Period logs fetch error:", error);
 
+  const { data: user } = await supabase
+    .from("users")
+    .select("gender")
+    .eq("id", session.userId)
+    .single();
+
   const safeLogs = (logs as any[]) ?? [];
-  const nameLower = session.displayName?.toLowerCase() || "";
-  const isOyku = session.username === "oyku" || nameLower.includes("öykü") || nameLower.includes("oyku");
+  const isFemale = user?.gender === "female";
 
   return (
     <div
       className="px-4 pt-10 pb-20 flex flex-col max-w-lg mx-auto"
       style={{ background: "#0a0a0f", minHeight: "100%" }}
     >
-      <PeriodTrackerClient logs={safeLogs} isOyku={isOyku} />
+      <PeriodTrackerClient logs={safeLogs} isFemale={isFemale} />
     </div>
   );
 }

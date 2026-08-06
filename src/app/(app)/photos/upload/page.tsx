@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PhotoUploadForm } from "@/components/photos/PhotoUploadForm";
 
 export const metadata: Metadata = {
-  title: "Fotoğraf Yükle — Emirhan & Öykü 💕",
+  title: "Fotoğraf Yükle — Couples App 💕",
 };
 
 export default async function PhotoUploadPage() {

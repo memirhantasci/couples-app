@@ -2,9 +2,10 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CalendarHeart, Loader2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useRef } from "react";
 import { saveMemoryAction } from "@/actions/memories";
 import { toast } from "sonner";
+import { Image as ImageIcon } from "lucide-react";
 
 interface Memory {
   id: number;
@@ -38,9 +39,28 @@ export function MemoryModal({ isOpen, onClose, memory }: MemoryModalProps) {
         setDateVal(new Date().toISOString().split("T")[0]);
         setTitleVal("");
         setDescVal("");
+        setPreview(null);
+        if (fileRef.current) fileRef.current.value = "";
       }
     }
   }, [isOpen, memory]);
+
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("Dosya boyutu çok büyük! Lütfen 2 MB'dan küçük bir fotoğraf seçin.");
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+      }
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setPreview(null);
+    }
+  };
 
   useEffect(() => {
     if ((state as any)?.success) {
@@ -113,6 +133,54 @@ export function MemoryModal({ isOpen, onClose, memory }: MemoryModalProps) {
               <form action={formAction} className="flex flex-col gap-4">
                 {/* Hidden input for ID (Edit Mode) */}
                 {memory && <input type="hidden" name="id" value={memory.id} />}
+
+                {/* Fotoğraf Yükleme */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium pl-1" style={{ color: "rgba(255,255,255,0.8)" }}>
+                    Fotoğraf {memory ? "(Değiştirmek istersen seç)" : "(İsteğe Bağlı)"}
+                  </label>
+                  <input
+                    type="file"
+                    name="photo"
+                    accept="image/*"
+                    ref={fileRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => fileRef.current?.click()}
+                    className="flex flex-col items-center justify-center cursor-pointer transition-all"
+                    style={{
+                      padding: "16px",
+                      background: "rgba(0,0,0,0.3)",
+                      border: preview ? "1px solid rgba(232,0,45,0.4)" : "1px dashed rgba(255,255,255,0.2)",
+                      borderRadius: 16,
+                      minHeight: preview ? "auto" : 80,
+                    }}
+                  >
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="Önizleme"
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                    ) : memory?.image_url ? (
+                      <div className="flex flex-col items-center gap-2">
+                         <img
+                          src={memory.image_url}
+                          alt="Mevcut Fotoğraf"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <span className="text-xs text-white/60">Değiştirmek için tıkla</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 opacity-70">
+                        <ImageIcon size={24} />
+                        <span className="text-xs">Fotoğraf Seç</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Tarih */}
                 <div className="flex flex-col gap-1">

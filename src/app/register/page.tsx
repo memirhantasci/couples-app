@@ -97,7 +97,7 @@ export default function RegisterPage() {
                     id="displayName"
                     name="displayName"
                     type="text"
-                    placeholder="İsim (Örn: Emirhan)"
+                    placeholder="İsim (Örn: Ahmet)"
                     required
                     className="w-full custom-placeholder"
                     style={{
@@ -239,6 +239,25 @@ export default function RegisterPage() {
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
+                </div>
+              </div>
+
+              {/* Gender */}
+              <div className="flex flex-col gap-2 mt-1">
+                <p className="text-xs text-white/50 px-2 font-medium">CİNSİYET</p>
+                <div className="flex gap-3">
+                  <label className="flex-1 relative">
+                    <input type="radio" name="gender" value="female" className="peer sr-only" required />
+                    <div className="w-full text-center py-3 rounded-xl border border-white/10 bg-black/25 text-white/70 peer-checked:bg-[rgba(232,0,45,0.2)] peer-checked:border-[#E8002D] peer-checked:text-[#E8002D] font-medium transition-all cursor-pointer">
+                      Kadın
+                    </div>
+                  </label>
+                  <label className="flex-1 relative">
+                    <input type="radio" name="gender" value="male" className="peer sr-only" required />
+                    <div className="w-full text-center py-3 rounded-xl border border-white/10 bg-black/25 text-white/70 peer-checked:bg-[rgba(232,0,45,0.2)] peer-checked:border-[#E8002D] peer-checked:text-[#E8002D] font-medium transition-all cursor-pointer">
+                      Erkek
+                    </div>
+                  </label>
                 </div>
               </div>
 

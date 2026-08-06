@@ -9,13 +9,11 @@ const createMemorySchema = z.object({
   date: z.string().min(1, "Tarih gerekli").refine((val) => {
     const selectedDate = new Date(val);
     const today = new Date();
-    // Allow up to the end of today
     today.setHours(23, 59, 59, 999);
     return selectedDate <= today;
   }, "Gelecekteki bir tarih seçemezsiniz."),
   title: z.string().min(1, "Başlık gerekli").max(255),
   description: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal("")),
 });
 
 export async function saveMemoryAction(
@@ -33,25 +31,57 @@ export async function saveMemoryAction(
     date: formData.get("date"),
     title: formData.get("title"),
     description: formData.get("description") || undefined,
-    image_url: formData.get("image_url") || undefined,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.errors[0].message };
   }
 
+  const file = formData.get("photo") as File | null;
+  let image_url: string | undefined = undefined;
+
   const supabase = createServerClient();
+
+  if (file && file.size > 0) {
+    if (file.size > 2 * 1024 * 1024) {
+      return { error: "Fotoğraf boyutu 2MB'den küçük olmalıdır." };
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const fileName = `memory_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const storagePath = `memories/${session.userId}/${fileName}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer);
+
+    const { error: uploadError } = await supabase.storage
+      .from("couples-media")
+      .upload(storagePath, fileBuffer, {
+        contentType: file.type || "image/jpeg",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return { error: "Fotoğraf yüklenirken hata oluştu: " + uploadError.message };
+    }
+
+    image_url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/couples-media/${storagePath}`;
+  }
 
   if (id) {
     // Update existing
+    const updateData: any = {
+      date: parsed.data.date,
+      title: parsed.data.title,
+      description: parsed.data.description || null,
+    };
+    if (image_url) {
+      updateData.image_url = image_url;
+    }
+
     const { error } = await supabase
       .from("memories")
-      .update({
-        date: parsed.data.date,
-        title: parsed.data.title,
-        description: parsed.data.description || null,
-        // image_url: parsed.data.image_url || null,
-      })
+      .update(updateData)
       .eq("id", id)
       .eq("couple_id", session.coupleId)
       .neq("is_default", true);
@@ -65,7 +95,7 @@ export async function saveMemoryAction(
       date: parsed.data.date,
       title: parsed.data.title,
       description: parsed.data.description || null,
-      image_url: parsed.data.image_url || null,
+      image_url: image_url || null,
       is_default: false,
       couple_id: session.coupleId,
     });
