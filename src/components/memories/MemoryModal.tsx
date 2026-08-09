@@ -12,6 +12,7 @@ interface Memory {
   date: string;
   title: string;
   description?: string | null;
+  image_url?: string | null;
 }
 
 interface MemoryModalProps {

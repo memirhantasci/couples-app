@@ -149,15 +149,15 @@ export function ProfileClient({
 }: Props) {
   const [profileState, profileAction, profilePending] = useActionState(
     updateProfileAction,
-    null
+    {}
   );
   const [datesState, datesAction, datesPending] = useActionState(
     updateCoupleDatesProfileAction,
-    null
+    {}
   );
   const [deleteState, deleteAction, deletePending] = useActionState(
     scheduleAccountDeletionAction,
-    null
+    {}
   );
   const [gender, setGender] = useState<"male" | "female">(initialGender);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

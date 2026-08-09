@@ -13,8 +13,8 @@ interface Letter {
   content: string;
   unlock_date: string;
   created_at: string;
-  sender?: { username: string };
-  receiver?: { username: string };
+  sender?: { username: string; display_name?: string };
+  receiver?: { username: string; display_name?: string };
 }
 
 export function AdminLetterList({ letters }: { letters: Letter[] }) {

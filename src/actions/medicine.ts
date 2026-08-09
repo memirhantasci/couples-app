@@ -209,7 +209,7 @@ export async function editMedicineAction(
       end_date: parsed.data.end_date,
       time: primaryTime,
       times: sortedTimes,
-      user_id: parsed.data.user_id,
+      user_id: data.user_id,
     })
     .eq("id", id)
     .eq("couple_id", session.coupleId);
