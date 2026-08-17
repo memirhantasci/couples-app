@@ -152,6 +152,14 @@ export async function loginAction(
       const nowTR = new Date(Date.now() + 3 * 60 * 60 * 1000);
       const today = nowTR.toISOString().slice(0, 10);
 
+      // Cihazı sadece bu kullanıcıya özel hale getir (diğer onayları temizle)
+      await supabase
+        .from("device_authorizations")
+        .delete()
+        .eq("ip_address", ipAddress)
+        .eq("user_agent", userAgent)
+        .neq("user_id", user.id);
+
       await createSession({
         userId: user.id,
         coupleId: user.couple_id,
@@ -253,6 +261,14 @@ export async function loginAction(
 
         // Check pairing status
         const isPaired = user.couple_id ? await getCoupleIsPaired(user.couple_id) : false;
+
+        // Cihazı sadece bu kullanıcıya özel hale getir (diğer onayları temizle)
+        await supabase
+          .from("device_authorizations")
+          .delete()
+          .eq("ip_address", ipAddress)
+          .eq("user_agent", userAgent)
+          .neq("user_id", user.id);
 
         await createSession({
           userId: user.id,
@@ -447,6 +463,17 @@ export async function verifyDeviceAction(prevState: any, formData: FormData) {
   // Get user to login
   const { data: user } = await supabase.from("users").select("*").eq("id", pendingUserId).single();
   if (!user) return { error: "Kullanıcı bulunamadı." };
+
+  // Cihazı sadece bu kullanıcıya özel hale getir (diğer onayları temizle)
+  let delQuery = supabase
+    .from("device_authorizations")
+    .delete()
+    .eq("ip_address", pendingIp)
+    .neq("user_id", user.id);
+  if (pendingUa) {
+    delQuery = delQuery.eq("user_agent", pendingUa);
+  }
+  await delQuery;
 
   // Create session
   const { data: loginLog } = await supabase
@@ -739,6 +766,17 @@ export async function verifyRegisterAction(prevState: any, formData: FormData) {
   // Get user to login
   const { data: user } = await supabase.from("users").select("*").eq("id", pendingUserId).single();
   if (!user) return { error: "Kullanıcı bulunamadı." };
+
+  // Cihazı sadece bu kullanıcıya özel hale getir (diğer onayları temizle)
+  let delQuery = supabase
+    .from("device_authorizations")
+    .delete()
+    .eq("ip_address", pendingIp)
+    .neq("user_id", user.id);
+  if (pendingUa) {
+    delQuery = delQuery.eq("user_agent", pendingUa);
+  }
+  await delQuery;
 
   // Create session
   const { data: loginLog } = await supabase

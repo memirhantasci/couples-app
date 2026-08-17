@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/session";
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { MedicineTracker } from "@/components/medicine/MedicineTracker";
 import { Trophy } from "lucide-react";
 import { dayjs, todayString } from "@/lib/date";
@@ -126,6 +127,14 @@ export default async function MedicinePage() {
             </div>
           )}
         </div>
+        
+        <Link
+          href="/medicine/history"
+          className="mt-4 px-4 py-2 text-white rounded-full text-sm font-medium transition-colors border border-neutral-800 flex items-center gap-2"
+          style={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+        >
+          Geçmişi Görüntüle
+        </Link>
       </div>
 
       <MedicineTracker
